@@ -1,19 +1,27 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { deleteCartAsync, getCartAsync, addQuantity } from '../../redux/user/Cart';
+import { useNavigate } from 'react-router-dom';
+import Nav from '../global/Nav';
 
 const ShoppingCart = () => {
+  const navigate = useNavigate();
   const dispatch = useDispatch();
   const cart = useSelector((state) => state.cart.cart);
   const [subtotal, setSubtotal] = useState(0);
-  const [gstAmount, setGstAmount] = useState(0);
   const [total, setTotal] = useState(0);
+  const [available, setAvailable] = useState({});
+  const [errorMessage, setErrorMessage] = useState('');
 
   const handleQuantityChange = async (product_id, quantity) => {
     try {
-      await dispatch(addQuantity({ product_id, quantity })).unwrap();
-     
+      const result = await dispatch(addQuantity({ product_id, quantity })).unwrap();
+      if (result && result.count !== undefined) {
+        setErrorMessage(`Only ${result.count} left in stock.`);
+      } else {
+        setErrorMessage('');
+      }
     } catch (error) {
       console.error('Error updating quantity:', error);
     }
@@ -22,69 +30,99 @@ const ShoppingCart = () => {
   const handleDelete = async (productId) => {
     try {
       await dispatch(deleteCartAsync(productId)).unwrap();
-      
     } catch (error) {
       console.error('Error deleting cart item:', error);
     }
   };
 
   useEffect(() => {
-    console.log("dissss")
     dispatch(getCartAsync());
   }, [dispatch]);
 
   useEffect(() => {
-    if (cart) {
+    if (cart && cart.products) {
       const calculatedSubtotal = cart.products.reduce(
-        (acc, item) => acc + item.productId.productPrice * item.quantity,
+        (acc, item) => acc + item.productId.salePrice * item.quantity,
         0
       );
       setSubtotal(calculatedSubtotal);
-      const calculatedGst = calculatedSubtotal * 0.18;
-      setGstAmount(calculatedGst);
-      setTotal(calculatedSubtotal + calculatedGst);
+      setTotal(calculatedSubtotal);
+
+      const availableQuantities = {};
+      cart.products.forEach((item) => {
+        availableQuantities[item.productId._id] = item.productId.quantity;
+      });
+      setAvailable(availableQuantities);
     }
   }, [cart]);
 
-  if (!cart || cart.products.length === 0) {
-    return <p>Your cart is empty.</p>;
+  if (!cart || !cart.products || cart.products.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center p-24">
+        <Nav />
+        <h2 className="text-2xl font-bold mb-4">Your Cart is Empty</h2>
+        <p className="text-gray-600">Start adding items to your cart!</p>
+      </div>
+    );
   }
 
   return (
-    <div className="flex flex-col md:flex-row gap-8 p-4 max-w-6xl mx-auto">
+    <div className="flex flex-col md:flex-row gap-8 p-24 max-w-6xl mx-auto">
+      <Nav />
       <div className="flex-grow">
         <h2 className="text-2xl font-bold mb-4">YOUR CART</h2>
         <p className="mb-4">Total {cart.products.length} Items In Your Cart</p>
-        {cart.products.map((item) => (
-          <div key={item.productId._id} className="flex items-center gap-4 border-b py-4">
-            <img
-              src={item.productId.images[0]}
-              alt={item.productId.productName}
-              className="w-24 h-24 object-cover"
-            />
-            <div className="flex-grow">
-              <h3 className="font-bold text-blue-600">{item.productId.productName}</h3>
-              <p className="text-sm text-gray-600">Category: {item.productId.category}</p>
-              <p className="font-bold">₹ {item.productId.productPrice.toLocaleString()}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <select
-                className="border p-1"
-                defaultValue={item.quantity}
-                onChange={(e) => handleQuantityChange(item.productId._id, e.target.value)}
-              >
-                {[...Array(10)].map((_, index) => (
-                  <option key={index} value={index + 1}>{index + 1}</option>
-                ))}
-              </select>
-              <Trash2
-                className="text-gray-500 cursor-pointer"
-                onClick={() => handleDelete(item.productId._id)}
+        {cart.products.map((item) => {
+          const stock = available[item.productId._id] || 0;
+
+          return (
+            <div key={item.productId._id} className="flex items-center gap-4 border-b py-4">
+              <img
+                src={item.productId.images[0]}
+                alt={item.productId.productName}
+                className="w-24 h-24 object-cover"
               />
+              <div className="flex-grow">
+                <h3 className="font-bold text-blue-600">{item.productId.productName}</h3>
+                <p className="text-sm text-gray-600">Category: {item.productId.category}</p>
+                <p className="font-bold">₹ {item.productId.salePrice.toLocaleString()}</p>
+                {stock === 0 ? (
+                  <p className="text-red-500 font-bold">Out of Stock</p>
+                ) : (
+                  errorMessage && (
+                    <p className="text-red-500">{errorMessage}</p>
+                  )
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {stock > 0 ? (
+                  <select
+                    className="border p-1"
+                    defaultValue={item.quantity}
+                    onChange={(e) => handleQuantityChange(item.productId._id, e.target.value)}
+                  >
+                    {[...Array(Math.min(stock, 10))].map((_, index) => (
+                      <option key={index} value={index + 1}>
+                        {index + 1}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <button className="bg-gray-300 text-gray-600 cursor-not-allowed" disabled>
+                    Quantity Unavailable
+                  </button>
+                )}
+                <Trash2
+                  className="text-gray-500 cursor-pointer"
+                  onClick={() => handleDelete(item.productId._id)}
+                />
+              </div>
             </div>
-          </div>
-        ))}
-        <button className="bg-purple-800 text-white py-2 px-4 mt-4 w-full">Checkout</button>
+          );
+        })}
+        <button onClick={() => navigate("/checkout")} className="bg-purple-800 text-white py-2 px-4 mt-4 w-full">
+          Checkout
+        </button>
       </div>
 
       <div className="w-full md:w-80">
@@ -98,10 +136,6 @@ const ShoppingCart = () => {
             <span>Delivery Charges</span>
             <span className="text-green-600">Free</span>
           </div>
-          <div className="flex justify-between mb-2">
-            <span>GST Amount</span>
-            <span>₹ {gstAmount.toLocaleString()}</span>
-          </div>
           <div className="flex justify-between font-bold text-lg mt-4">
             <span>TOTAL</span>
             <span>₹ {total.toLocaleString()}</span>
@@ -113,4 +147,3 @@ const ShoppingCart = () => {
 };
 
 export default ShoppingCart;
-

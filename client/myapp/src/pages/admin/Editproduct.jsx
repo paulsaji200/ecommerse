@@ -1,112 +1,131 @@
-import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useState, useRef, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import api from "../../utils/axios";
 import { fetchCategories } from "../../redux/admin/Category";
+import axios from "axios";
+import Cropper from "react-cropper";
+import "cropperjs/dist/cropper.css";
+import { FaTimes } from "react-icons/fa";
+import api from "../../utils/axios";
+import { useNavigate, useParams } from "react-router-dom";
 
 const EditProductPage = () => {
+  const naviagate = useNavigate();
   const { productId } = useParams();
-  const navigate = useNavigate();
-  const dispatch = useDispatch();
   const [productData, setProductData] = useState({
-    productName: '',
-    category: '',
-    categoryName: '',
-    description: '',
-    productPrice: '',
-    salePrice: '',
-    quantity: '',
-    brandName: '',
-    images: [], // URLs of images
-    files: [], // File objects
+    productName: "",
+    category: "",
+    description: "",
+    productPrice: "",
+    salePrice: "",
+    quantity: "",
+    brandName: "",
+    images: [],
+    files: [],
   });
+
   const [errors, setErrors] = useState({});
+  const [successMessage, setSuccessMessage] = useState("");
+  const [currentImage, setCurrentImage] = useState(null);
+  const [imagePreviews, setImagePreviews] = useState([]);
+
+  const cropperRef = useRef(null);
+  const dispatch = useDispatch();
   const categories = useSelector((state) => state.categories.categories);
 
   useEffect(() => {
-    dispatch(fetchCategories()); // Fetch categories when the component mounts
-  }, [dispatch]);
+    dispatch(fetchCategories());
 
-  useEffect(() => {
-    if (categories.length > 0) {
-      const fetchProductDetails = async () => {
-        try {
-          const response = await api.get(`/admin/geteditproduct/${productId}`);
-          const product = response.data.data;
+    const fetchProductDetails = async () => {
+      try {
+        const response = await api.get(`/admin/geteditproduct/${productId}`);
+        const product = response.data.data;
+
+        if (product) {
           setProductData({
-            ...product,
-            categoryName: categories.find(cat => cat._id === product.category)?.name || '',
-            images: product.images || [], // Set images if available
-            files: [], // Initialize files as empty
+            productName: product.productName || "",
+            category: product.category || "",
+            description: product.description || "",
+            productPrice: product.productPrice || "",
+            salePrice: product.salePrice || "",
+            quantity: product.quantity || "",
+            brandName: product.brandName || "",
+            images: product.images || [],
+            files: [],
           });
-        } catch (error) {
-          console.error("Error fetching product details:", error);
+          setImagePreviews(product.images.map((img) => img));
         }
-      };
+      } catch (error) {
+        console.error("Error fetching product details:", error);
+      }
+    };
 
-      fetchProductDetails();
-    }
-  }, [categories, productId]);
+    fetchProductDetails();
+  }, [dispatch, productId]);
 
   const url = "https://api.cloudinary.com/v1_1/dasqrolmh/upload";
   const uploadPreset = "mern_product";
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    if (name === 'category') {
-      const selectedCategory = categories.find(cat => cat._id === value);
-      setProductData({
-        ...productData,
-        category: value,
-        categoryName: selectedCategory ? selectedCategory.name : '',
-      });
-    } else {
-      setProductData({ ...productData, [name]: value });
+    setProductData({ ...productData, [name]: value });
+  };
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setCurrentImage(URL.createObjectURL(file));
     }
   };
 
-  const handleImageChange = (e) => {
-    const files = Array.from(e.target.files);
-    const newFiles = files.slice(0, 3 - productData.files.length); // Limit to 3 files
-
-    const imagePreviews = newFiles.map(file => URL.createObjectURL(file));
-
-    setProductData(prevState => ({
-      ...prevState,
-      images: [...prevState.images, ...imagePreviews], // Append new image previews
-      files: [...prevState.files, ...newFiles], // Append new file objects
-    }));
+  const handleCrop = () => {
+    if (cropperRef.current) {
+      const cropper = cropperRef.current.cropper;
+      if (cropper) {
+        const croppedCanvas = cropper.getCroppedCanvas();
+        const croppedImageUrl = croppedCanvas.toDataURL();
+        const newFile = dataURLtoFile(croppedImageUrl, "cropped-image.jpg");
+        setProductData((prevState) => ({
+          ...prevState,
+          files: [...prevState.files, newFile],
+        }));
+        setImagePreviews((prev) => [...prev, URL.createObjectURL(newFile)]);
+        setCurrentImage(null);
+      }
+    }
   };
 
-  const handleImageRemove = (image) => {
-    setProductData(prevState => {
-      const updatedImages = prevState.images.filter(img => img !== image);
-      const indexToRemove = prevState.images.indexOf(image);
-      const updatedFiles = prevState.files.filter((_, index) => index !== indexToRemove);
-
-      return {
-        ...prevState,
-        images: updatedImages,
-        files: updatedFiles,
-      };
-    });
+  const dataURLtoFile = (dataURL, filename) => {
+    const [header, data] = dataURL.split(",");
+    const mime = header.match(/:(.*?);/)[1];
+    const binary = atob(data);
+    const array = [];
+    for (let i = 0; i < binary.length; i++) {
+      array.push(binary.charCodeAt(i));
+    }
+    return new File([new Uint8Array(array)], filename, { type: mime });
   };
 
   const validateForm = () => {
     const newErrors = {};
 
-    if (!productData.productName) newErrors.productName = "Product name is required";
+    if (!productData.productName)
+      newErrors.productName = "Product name is required";
     if (!productData.category) newErrors.category = "Category is required";
-    if (!productData.description) newErrors.description = "Description is required";
-    if (!productData.productPrice || isNaN(productData.productPrice)) newErrors.productPrice = "Valid product price is required";
-    if (!productData.salePrice || isNaN(productData.salePrice)) newErrors.salePrice = "Valid sale price is required";
-    if (!productData.quantity || isNaN(productData.quantity)) newErrors.quantity = "Valid quantity is required";
+    if (!productData.description)
+      newErrors.description = "Description is required";
+    if (!productData.productPrice || isNaN(productData.productPrice))
+      newErrors.productPrice = "Valid product price is required";
+    if (!productData.salePrice || isNaN(productData.salePrice))
+      newErrors.salePrice = "Valid sale price is required";
+    if (!productData.quantity || isNaN(productData.quantity))
+      newErrors.quantity = "Valid quantity is required";
     if (!productData.brandName) newErrors.brandName = "Brand name is required";
 
-    if (productData.files.length > 0 && productData.files.length < 3) {
-      newErrors.files = "At least three images are required";
-    } else if (productData.files.length === 0 && productData.images.length === 0) {
-      newErrors.files = "At least one image is required";
+    const totalImages = productData.files.length + productData.images.length;
+
+    if (totalImages < 3) {
+      newErrors.files =
+        "At least three images (including existing ones) are required";
     }
 
     setErrors(newErrors);
@@ -116,48 +135,64 @@ const EditProductPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!validateForm()) return; // If validation fails, do not proceed
+    if (!validateForm()) {
+      return;
+    }
 
     try {
-      let uploadedImages = productData.images; // Default to existing images
+      const uploadedImages = await Promise.all(
+        productData.files.map(async (file) => {
+          const formData = new FormData();
+          formData.append("file", file);
+          formData.append("upload_preset", uploadPreset);
 
-      if (productData.files.length > 0) {
-        uploadedImages = await Promise.all(
-          productData.files.map(async (file) => {
-            const formData = new FormData();
-            formData.append("file", file);
-            formData.append("upload_preset", uploadPreset);
+          const response = await fetch(url, {
+            method: "POST",
+            body: formData,
+          });
 
-            const response = await fetch(url, {
-              method: "POST",
-              body: formData,
-            });
+          if (!response.ok) {
+            throw new Error("Failed to upload image");
+          }
 
-            if (!response.ok) throw new Error('Failed to upload image');
-
-            const data = await response.json();
-            return data.secure_url;
-          })
-        );
-
-        uploadedImages = [...productData.images, ...uploadedImages]; // Combine old and new images
-      }
+          const data = await response.json();
+          return data.secure_url;
+        })
+      );
 
       const finalProductData = {
         ...productData,
-        images: uploadedImages,
+        images: [...productData.images, ...uploadedImages],
       };
 
       await api.put(`/admin/updateproduct/${productId}`, finalProductData);
-      navigate("/admin/products");
+
+      setSuccessMessage("Product successfully updated!");
+      setProductData({
+        productName: "",
+        category: "",
+        description: "",
+        productPrice: "",
+        salePrice: "",
+        quantity: "",
+        brandName: "",
+        images: [],
+        files: [],
+      });
+     naviagate("/admin/products")
+      setImagePreviews([]);
+      setErrors({});
     } catch (error) {
-      console.error("Error updating product:", error);
+      console.error("Error uploading product:", error);
     }
   };
 
   return (
     <div className="w-3/4 p-8">
       <h2 className="text-2xl font-bold mb-4">Edit Product</h2>
+      {successMessage && (
+        <p className="text-green-500 mb-4">{successMessage}</p>
+      )}
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="flex space-x-4">
           <div className="w-1/2">
@@ -165,29 +200,33 @@ const EditProductPage = () => {
             <input
               type="text"
               name="productName"
-              value={productData.productName || ''}
+              value={productData.productName}
               onChange={handleInputChange}
               className="w-full p-2 border border-gray-300 rounded"
               placeholder="Enter product name"
             />
-            {errors.productName && <p className="text-red-500 text-sm">{errors.productName}</p>}
+            {errors.productName && (
+              <p className="text-red-500 text-sm">{errors.productName}</p>
+            )}
           </div>
           <div className="w-1/2">
             <label className="block text-gray-700">Category:</label>
             <select
               name="category"
-              value={productData.category || ''}
+              value={productData.category}
               onChange={handleInputChange}
               className="w-full p-2 border border-gray-300 rounded"
             >
               <option value="">Select a category</option>
               {categories.map((category) => (
-                <option key={category._id} value={category._id}>
+                <option key={category._id} value={category.name}>
                   {category.name}
                 </option>
               ))}
             </select>
-            {errors.category && <p className="text-red-500 text-sm">{errors.category}</p>}
+            {errors.category && (
+              <p className="text-red-500 text-sm">{errors.category}</p>
+            )}
           </div>
         </div>
 
@@ -195,12 +234,14 @@ const EditProductPage = () => {
           <label className="block text-gray-700">Description:</label>
           <textarea
             name="description"
-            value={productData.description || ''}
+            value={productData.description}
             onChange={handleInputChange}
             className="w-full p-2 border border-gray-300 rounded"
             placeholder="Enter product description"
           />
-          {errors.description && <p className="text-red-500 text-sm">{errors.description}</p>}
+          {errors.description && (
+            <p className="text-red-500 text-sm">{errors.description}</p>
+          )}
         </div>
 
         <div className="flex space-x-4">
@@ -209,24 +250,28 @@ const EditProductPage = () => {
             <input
               type="number"
               name="productPrice"
-              value={productData.productPrice || ''}
+              value={productData.productPrice}
               onChange={handleInputChange}
               className="w-full p-2 border border-gray-300 rounded"
               placeholder="Enter product price"
             />
-            {errors.productPrice && <p className="text-red-500 text-sm">{errors.productPrice}</p>}
+            {errors.productPrice && (
+              <p className="text-red-500 text-sm">{errors.productPrice}</p>
+            )}
           </div>
           <div className="w-1/2">
             <label className="block text-gray-700">Sale Price:</label>
             <input
               type="number"
               name="salePrice"
-              value={productData.salePrice || ''}
+              value={productData.salePrice}
               onChange={handleInputChange}
               className="w-full p-2 border border-gray-300 rounded"
               placeholder="Enter sale price"
             />
-            {errors.salePrice && <p className="text-red-500 text-sm">{errors.salePrice}</p>}
+            {errors.salePrice && (
+              <p className="text-red-500 text-sm">{errors.salePrice}</p>
+            )}
           </div>
         </div>
 
@@ -236,24 +281,28 @@ const EditProductPage = () => {
             <input
               type="number"
               name="quantity"
-              value={productData.quantity || ''}
+              value={productData.quantity}
               onChange={handleInputChange}
               className="w-full p-2 border border-gray-300 rounded"
               placeholder="Enter quantity"
             />
-            {errors.quantity && <p className="text-red-500 text-sm">{errors.quantity}</p>}
+            {errors.quantity && (
+              <p className="text-red-500 text-sm">{errors.quantity}</p>
+            )}
           </div>
           <div className="w-1/2">
             <label className="block text-gray-700">Brand Name:</label>
             <input
               type="text"
               name="brandName"
-              value={productData.brandName || ''}
+              value={productData.brandName}
               onChange={handleInputChange}
               className="w-full p-2 border border-gray-300 rounded"
               placeholder="Enter brand name"
             />
-            {errors.brandName && <p className="text-red-500 text-sm">{errors.brandName}</p>}
+            {errors.brandName && (
+              <p className="text-red-500 text-sm">{errors.brandName}</p>
+            )}
           </div>
         </div>
 
@@ -262,30 +311,58 @@ const EditProductPage = () => {
           <input
             type="file"
             accept="image/*"
-            multiple
-            onChange={handleImageChange}
-            className="block w-full text-sm text-gray-700"
+            onChange={handleImageUpload}
+            className="w-full mb-2"
           />
-          {errors.files && <p className="text-red-500 text-sm">{errors.files}</p>}
-          <div className="mt-4 flex space-x-2">
-            {productData.images.map((image, index) => (
-              <div key={index} className="relative">
-                <img src={image} alt={`Product ${index}`} className="w-24 h-24 object-cover rounded" />
+          {currentImage && (
+            <div>
+              <Cropper
+                src={currentImage}
+                ref={cropperRef}
+                style={{ height: 200, width: "100%" }}
+                initialAspectRatio={1}
+                aspectRatio={1}
+                guides={false}
+              />
+              <button
+                type="button"
+                onClick={handleCrop}
+                className="mt-2 p-2 bg-blue-500 text-white rounded"
+              >
+                Crop and Upload
+              </button>
+            </div>
+          )}
+          <div className="mt-4">
+            {imagePreviews.map((img, index) => (
+              <div key={index} className="relative inline-block mr-2">
+                <img
+                  src={img}
+                  alt={`Product ${index}`}
+                  className="h-20 w-20 object-cover"
+                />
                 <button
-                  type="button"
-                  onClick={() => handleImageRemove(image)}
-                  className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1"
+                  onClick={() => {
+                    const newImages = imagePreviews.filter(
+                      (_, i) => i !== index
+                    );
+                    setImagePreviews(newImages);
+                  }}
+                  className="absolute top-0 right-0 text-red-500"
                 >
-                  &times;
+                  <FaTimes />
                 </button>
               </div>
             ))}
           </div>
+          {errors.files && (
+            <p className="text-red-500 text-sm">{errors.files}</p>
+          )}
         </div>
 
         <button
           type="submit"
-          className="bg-blue-500 text-white p-2 rounded"
+          className="mt-4 p-2 bg-green-500 text-white rounded"
         >
           Update Product
         </button>

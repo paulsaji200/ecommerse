@@ -60,21 +60,21 @@ const oauth2client = new google.auth.OAuth2(
     }
   });
   
-  // Mock database to store OTPs (Use a real database in production)
+ 
   const otpDatabase = {};
   
-  // Route to send OTP
+
   app.post('/api/send-otp', async (req, res) => {
     const { email } = req.body;
     if (!email) {
       return res.status(400).json({ message: 'Email is required' });
     }
   
-    // Generate OTP
+   
     const otp = crypto.randomInt(100000, 999999).toString();
     otpDatabase[email] = otp;
   
-    // Send OTP via email
+    
     const mailOptions = {
       from: '"Your Name" <paulsaji201@gmail.com>',
       to: email,
@@ -92,7 +92,7 @@ const oauth2client = new google.auth.OAuth2(
     }
   });
   
-  // Route to verify OTP
+ 
   app.post('/api/verify-otp', (req, res) => {
     console.log("otp....")
     console.log(otpDatabase)
@@ -102,7 +102,7 @@ const oauth2client = new google.auth.OAuth2(
     }
   
     if (otpDatabase[email] === otp) {
-      delete otpDatabase[email]; // OTP is valid, remove it from the database
+      delete otpDatabase[email]; 
       res.status(200).json({ message: 'OTP verified successfully' });
     } else {
       res.status(401).json({ message: 'Invalid OTP' });
@@ -117,20 +117,20 @@ app.get("/api/google", async (req, res) => {
   try {
     const { code } = req.query;
 
-    // Get OAuth tokens with the authorization code
+  
     const googleRes = await oauth2client.getToken(code);
     oauth2client.setCredentials(googleRes.tokens);
 
-    // Fetch user info using the access token
+  
     const userRes = await axios.get(`https://www.googleapis.com/oauth2/v1/userinfo?alt=json&access_token=${googleRes.tokens.access_token}`);
     console.log(userRes.data);
 
     const { email, name } = userRes.data;
 
-    // Find or create the user in the database
+    
     let user1 = await User.findOne({ email });
     if (!user1) {
-      // Create new user if not found
+   
       user1 = await User.create({
         email,
         name
@@ -143,8 +143,7 @@ app.get("/api/google", async (req, res) => {
 
     } else {
       const { _id, name: userName } = user1;
-      
-      // User exists, generate token
+     
       generateToken(res, { _id, name: userName });
     }   
 

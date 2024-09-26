@@ -2,10 +2,11 @@ import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import ReactImageMagnify from "react-image-magnify";
 import api from "../../utils/axios";
-import { FaHeart } from "react-icons/fa"; // Import heart icon for wishlist
-import { AiOutlineShoppingCart } from "react-icons/ai"; // Import cart icon for add to cart
+import { FaHeart } from "react-icons/fa";
+import { AiOutlineShoppingCart } from "react-icons/ai";
 import { addToCartAsync } from "../../redux/user/Cart";
 import { useDispatch } from "react-redux";
+
 const ProductDetailPage = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -20,7 +21,6 @@ const ProductDetailPage = () => {
       const response = await api.get(`user/productdetails/${productId}`);
       const productData = response?.data?.data;
 
-      // Construct breadcrumbs data
       const breadcrumbs = [
         { label: "Home", url: "/" },
         { label: productData.category, url: `/${productData.category}` },
@@ -33,10 +33,8 @@ const ProductDetailPage = () => {
         setSelectedImage(productData.images[0]);
       }
 
-      // Check if the product is in wishlist or cart
-      // (This can be replaced with actual logic)
-      setIsInWishlist(false); // Set based on actual wishlist data
-      setIsInCart(false); // Set based on actual cart data
+      setIsInWishlist(false);
+      setIsInCart(false);
     } catch (error) {
       console.error("Error fetching product data:", error);
     }
@@ -47,23 +45,21 @@ const ProductDetailPage = () => {
   }, [productId]);
 
   const handleAddToCart = (product) => {
-    const res =dispatch(addToCartAsync(product));
-    console.log(res)
-    if(res.status==401){
-      navigate("/login")
+    const res = dispatch(addToCartAsync(product));
+    console.log(res);
+    if (res.status == 401) {
+      navigate("/login");
     }
   };
 
   const handleAddToWishlist = () => {
-    // Add product to wishlist logic here
-    setIsInWishlist(!isInWishlist); // Toggle wishlist status
+    setIsInWishlist(!isInWishlist);
   };
 
   if (!product) {
     return <div>Loading...</div>;
   }
 
-  // Define the magnify options
   const magnifyProps = {
     smallImage: {
       alt: product.productName,
@@ -72,25 +68,25 @@ const ProductDetailPage = () => {
     },
     largeImage: {
       src: selectedImage,
-      width: 1200,
-      height: 1800,
+      width: 1600,
+      height: 2400,
     },
     enlargedImageContainerStyle: {
-      position: "absolute",
-      zIndex: 9,
-      top: 0,
-      right: 0,
+      zIndex: 9999,
     },
-    enlargedImageContainerClassName: "enlarged-image-container",
-    enlargedImageStyle: {
-      width: "100%",
+    enlargedImagePosition: "beside",
+    enlargedImageContainerDimensions: {
+      width: "200%",
       height: "100%",
     },
+    isHintEnabled: true,
+    shouldHideHintAfterFirstActivation: false,
+    hintTextMouse: "Hover to zoom",
+    imageClassName: "w-full h-auto",
   };
 
   return (
     <div className="container mx-auto p-6">
-      {/* Breadcrumbs */}
       <nav className="text-sm text-gray-500 mb-4">
         {product.breadcrumbs
           ? product.breadcrumbs.map((crumb, index) => (
@@ -109,9 +105,8 @@ const ProductDetailPage = () => {
       </nav>
 
       <div className="flex flex-col lg:flex-row gap-6 lg:gap-12">
-        <div className="flex flex-col lg:flex-row gap-4 lg:gap-8">
-          {/* Image Options on the Left */}
-          <div className="flex flex-col space-y-4 lg:w-24 lg:h-24">
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-8 lg:w-3/5">
+          <div className="flex lg:flex-col space-y-0 lg:space-y-4 space-x-4 lg:space-x-0">
             {product.images?.map((image, index) => (
               <img
                 key={index}
@@ -128,25 +123,23 @@ const ProductDetailPage = () => {
             ))}
           </div>
 
-          {/* Selected Product Image with Magnify */}
-          <div className="relative flex-1" style={{ maxWidth: "500px", position: "relative" }}>
-            <ReactImageMagnify {...magnifyProps} />
+          <div className="relative flex-1" style={{ maxWidth: "500px" }}>
+            <div style={{ width: '100%', position: 'relative' }}>
+              <ReactImageMagnify {...magnifyProps} />
+            </div>
           </div>
         </div>
 
-        {/* Product Details */}
-        <div className="flex-1 pl-0 lg:pl-12">
+        <div className="lg:w-2/5 pl-0 lg:pl-12">
           <h1 className="text-2xl lg:text-3xl font-semibold mb-2">{product.productName}</h1>
 
           <div className="flex items-center mb-4">
-            {/* Star Rating */}
             <div className="flex items-center mr-4">
               <span className="text-yellow-500">
                 {"★".repeat(4)}
                 {"☆".repeat(5 - 4)}
               </span>
             </div>
-            {/* Rating and Reviews Count */}
             <div className="flex items-center text-gray-600">
               <span className="text-xl font-bold">4.0</span>
               <span className="ml-2 text-sm">
@@ -172,7 +165,6 @@ const ProductDetailPage = () => {
             {product.quantity > 0 ? "In Stock" : "Out of Stock"}
           </div>
 
-          {/* Shipping Info */}
           <div className="text-sm text-gray-600 mb-4">
             <p>
               <strong>Free Shipping:</strong> Eligible for free shipping on
@@ -184,18 +176,15 @@ const ProductDetailPage = () => {
             </p>
           </div>
 
-          {/* Coupons */}
           <div className="text-red-500 font-semibold mb-4">
             <p>Special Offer: Use code SAVE10 for 10% off</p>
           </div>
 
-          {/* Description */}
           <div className="mb-4">
             <h3 className="font-semibold text-lg mb-2">Product Description</h3>
             <p className="text-gray-700">{product.description}</p>
           </div>
 
-          {/* Highlights */}
           <div className="mb-4">
             <h3 className="font-semibold text-lg mb-2">Product Highlights</h3>
             <ul className="list-disc pl-5 text-gray-700">
@@ -210,10 +199,6 @@ const ProductDetailPage = () => {
             </ul>
           </div>
 
-          {/* Specifications */}
-          {/* Add specifications section if needed */}
-
-          {/* Customer Reviews */}
           <div className="mb-4">
             <h3 className="font-semibold text-lg mb-2">Customer Reviews</h3>
             <p className="text-gray-700">
@@ -221,10 +206,9 @@ const ProductDetailPage = () => {
             </p>
           </div>
 
-          {/* Add to Cart and Add to Wishlist */}
           <div className="flex gap-4 mt-6">
             <button
-              onClick={()=>handleAddToCart(product)}
+              onClick={() => handleAddToCart(product)}
               className="flex items-center bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600"
             >
               <AiOutlineShoppingCart className="mr-2" /> {isInCart ? "Added to Cart" : "Add to Cart"}

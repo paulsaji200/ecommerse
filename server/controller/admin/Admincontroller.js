@@ -2,7 +2,7 @@
 import adminData from "../../models/adminModel.js"
 
 import { generateadminToken } from "../../utils/generateAdmintoken.js";
-
+import jwt from "jsonwebtoken"
 
 export const adminLogin = async (req, res) => {
   const { email, password } = req.body;
@@ -43,6 +43,8 @@ export const admintokenVerify = async (req, res) => {
       res.status(403).json({ valid: false, message: 'Not an admin' });
     }
   } catch (error) {
+    console.log(error)
+    
     res.status(400).json({ valid: false, message: 'Invalid token' });
   }
 };

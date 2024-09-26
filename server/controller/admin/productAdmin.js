@@ -56,7 +56,7 @@ export const editProduct = async (req, res) => {
       images,
     } = req.body;
 
-    const updatedProduct = await Product.findByIdAndUpdate(
+    const updatedProduct = await Product.findByIdAndUpdate(id,
       {
         productName,
         category,
@@ -75,7 +75,7 @@ export const editProduct = async (req, res) => {
         message: "Product not found",
       });
     }
-
+   console.log(updatedProduct)
     res.status(200).json({
       message: "Product updated successfully",
       product: updatedProduct,
@@ -154,6 +154,7 @@ export const viewcustomer = async (req, res) => {
 };
 
 export const editCategory = async (req, res) => {
+
   const { id } = req.params;
   const { name, listed } = req.body;
   try {
@@ -189,7 +190,7 @@ export const geteditproduct = async (req, res) => {
   const { id } = req.params;
   try {
     const product = await Product.findById(id);
-    console.log(product);
+    
     res.status(201).send({ data: product });
   } catch (error) {
     res.status(500).json({ error: "Internal Server Error" });

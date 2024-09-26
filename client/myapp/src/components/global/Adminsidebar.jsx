@@ -35,9 +35,12 @@ const Sidebar = () => {
 
             {/* Other fields without links */}
             <li className="text-sm font-medium">
-              <div className="flex items-center w-full py-2 px-4 rounded-full bg-pink-200">
-                <FaFileAlt className="mr-2" /> Orders
-              </div>
+            <NavLink
+                to="/admin/orders"
+                className={({ isActive }) => `flex items-center w-full py-2 px-4 rounded-full ${isActive ? 'bg-black text-white' : 'bg-pink-200 hover:bg-pink-300'}`}
+              >
+                <FaBoxOpen className="mr-2" /> Orders
+              </NavLink>
             </li>
             <li className="text-sm font-medium">
               <div className="flex items-center w-full py-2 px-4 rounded-full bg-pink-200">

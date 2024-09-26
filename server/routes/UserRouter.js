@@ -1,8 +1,8 @@
 
 import express from "express"
-import userRegister, { addAddress, deleteAddress, forgetpassword, getAddress, googleReg, Login, resetpassword, sendOtp, verifyOtp, verifyUser } from "../controller/user/Usercontroller.js";
-import getproduct, { productdetails, serachProduct } from "../controller/user/product.js";
-import createOrder, { addToCart, cartupdate, deleteCart, getCart,getOrder } from "../controller/user/order.js";
+import userRegister, { addAddress, deleteAddress, editAddress, forgetpassword, getAddress, googleReg, Login, resetpassword, sendOtp, userProfile, verifyOtp, verifyUser } from "../controller/user/Usercontroller.js";
+import getproduct, { filter, filterProduct, productdetails, search, serachProduct } from "../controller/user/product.js";
+import createOrder, { addToCart, cartupdate, clearCart, deleteCart, getCart,getOrder } from "../controller/user/order.js";
 import userAuth from "../middlewares/isuserAuth.js";
 
 
@@ -31,6 +31,11 @@ userRouter.delete("/deletecart/:product_id",userAuth,deleteCart)
 userRouter.delete("/deleteaddress/:id",userAuth,deleteAddress)
 userRouter.get("/products/search",serachProduct)
 userRouter.get("/getorder",userAuth,getOrder)
+userRouter.get("/profile",userAuth,userProfile)
+userRouter.delete("/clearcart",userAuth,clearCart)
+userRouter.patch("/updateaddress/:id",userAuth,editAddress)
+userRouter.patch("/cancerorder",userAuth,userCancelOrder)
 
-
+userRouter.get("/search",search)
+userRouter.get("/filter",filter)
 export default userRouter  

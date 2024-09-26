@@ -1,29 +1,35 @@
+import jwt from "jsonwebtoken";
+import Users from "../models/userModel.js"; 
+const userAuth = async (req, res, next) => {
+  console.log("hello........");
+  const token = req.cookies.token;
 
-import jwt from "jsonwebtoken"
+  if (!token) {
+    return res.status(401).json({ message: "No token provided, authorization denied" });
+  }
 
-const userAuth = (req, res, next) => {
+  try {
 
-    console.log("hello........")
-    const token = req.cookies.token;
-          console.log(token)
-    if (!token) {
-      return res.status(401).json({ message: "No token provided, authorization denied" });
+    const decoded = jwt.verify(token, "secretKey");
+    req.user = decoded;
+
+   
+    const user = await Users.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
     }
-  
-    try {
-      const decoded = jwt.verify(token, "secretKey");
-      req.user = decoded;
-      console.log(decoded)
-      next();
-    } catch (error) {
-      return res.status(401).json({ message: "Token is not valid" });
+
+    if (user.blocked) {
+      return res.status(403).json({ message: "User is blocked" });
     }
-  };
 
+    console.log("User verified and not blocked:", decoded);
+    next();
+  } catch (error) {
+    console.error(error);
+    return res.status(401).json({ message: "Token is not valid" });
+  }
+};
 
-
-
-
-
-
-  export default userAuth
+export default userAuth;

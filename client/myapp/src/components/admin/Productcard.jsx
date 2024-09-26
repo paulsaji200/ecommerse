@@ -1,37 +1,49 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+
 import { useNavigate } from 'react-router-dom';
-import api from '../../utils/axios';
 import { useDispatch } from 'react-redux';
 import { addToCartAsync } from '../../redux/user/Cart';
-
-
-
-const ProductCard = ({ product }) => {
-const dispatch = useDispatch();
-
-
+import { useState,useEffect } from 'react';
+import api from '../../utils/axios';
+import { useSelector } from 'react-redux';
+import { fetchAllProducts } from '../../redux/user/getProduct';
+import { selectProducts } from '../../redux/user/getProduct';
+import { selectError } from '../../redux/user/getProduct';
+import { selectLoading } from '../../redux/user/getProduct';
+import { fetchProducts } from '../../redux/user/getProduct';
+import SidebarFilter from '../user/sorting';
+import Nav from '../global/Nav';
+export const ProductCard = ({ product }) => {
+  const dispatch = useDispatch();
   const navigate = useNavigate();
+  
+  // Using local state to track which product has been added to the cart
+  const [addedToCart, setAddedToCart] = useState({});
 
-
-  const handleAddToCart = (product) => {
-    console.log("1")
+  // Handle adding product to cart and toggle button to "Go to Cart"
+  const handleAddToCart = (event, product) => {
+    event.stopPropagation();
     dispatch(addToCartAsync(product));
+    setAddedToCart(prevState => ({ ...prevState, [product._id]: true }));  // Set product as added
+  };
 
+  // Handle navigation to product details
+  const handleCardClick = (productId) => {
+    navigate(`/productdetails/${productId}`);
+  };
 
+  // Handle navigation to the cart
+  const goToCart = (event) => {
+    event.stopPropagation();
+    navigate('/cart');  // Assuming your cart route is '/cart'
+  };
 
-
-
-  }
   return (
     <div className="flex flex-wrap gap-4 justify-center">
       {product.map((productItem) => (
         <div
-          onClick={() => {
-            navigate(`/productdetails/${productItem._id}`);
-          }}
           key={productItem._id}
           className="w-64 h-auto rounded overflow-hidden shadow-lg bg-white p-4 flex flex-col mb-12"
+          onClick={() => handleCardClick(productItem._id)}  // Navigate to product details on card click
         >
           <img
             className="w-full h-60 object-cover"
@@ -57,13 +69,22 @@ const dispatch = useDispatch();
             </div>
           </div>
           <div className="px-2 py-2">
-          <button
-  className={`bg-blue-500 text-white font-bold py-1 px-2 rounded hover:bg-blue-700 w-full text-sm ${productItem.quantity === 0 ? 'cursor-not-allowed opacity-50' : ''}`}
-  disabled={productItem.quantity === 0}
-  onClick={() => handleAddToCart(productItem)}  // Only assign onClick if the product is in stock
->
-  {productItem.quantity > 0 ? 'Add to Cart' : 'Sold Out'}
-</button>
+            {addedToCart[productItem._id] ? (
+              <button
+                className="bg-green-500 text-white font-bold py-1 px-2 rounded hover:bg-green-700 w-full text-sm"
+                onClick={goToCart}  // Navigate to the cart
+              >
+                Go to Cart
+              </button>
+            ) : (
+              <button
+                className={`bg-blue-500 text-white font-bold py-1 px-2 rounded hover:bg-blue-700 w-full text-sm ${productItem.quantity === 0 ? 'cursor-not-allowed opacity-50' : ''}`}
+                disabled={productItem.quantity === 0}
+                onClick={(event) => handleAddToCart(event, productItem)}  // Add product to cart
+              >
+                {productItem.quantity > 0 ? 'Add to Cart' : 'Sold Out'}
+              </button>
+            )}
           </div>
         </div>
       ))}
@@ -72,31 +93,43 @@ const dispatch = useDispatch();
 };
 
 
+export const Productcomp = () => {
+ 
 
-
-const Productcomp = () => {
-  const [productData, setProductData] = useState([]);
+  const dispatch = useDispatch();
+  const products = useSelector((state) => state.products.products);
+ 
+  const loading = useSelector(selectLoading);
 
   useEffect(() => {
-    const datafetch = async () => {
-      try {
-        const response = await axios.get('/api/user/getproduct');
-        console.log('Fetched data:', response.data.data);
-        setProductData(response.data.data);
-      } catch (error) {
-        console.error('Error fetching product data:', error);
-      }
-    };
+    console.log('Fetching all products');
+    dispatch(fetchAllProducts());
+   
+  }, [dispatch]);
 
-    // Fetch data only once when the component mounts
-    datafetch();
-  }, []); // Empty dependency array ensures useEffect runs only once
+ 
 
-  return productData.length > 0 ? (
-    <ProductCard product={productData} />
-  ) : (
-    <div>No products available</div>
+ 
+
+  console.log('Loading:', loading);
+  console.log('Products:', products); // Log the products array
+
+  return (
+    <div className="flex">
+      <div className="flex-grow">
+        {loading ? (
+          <div>Loading...</div>
+        ) : Array.isArray(products) && products.length > 0 ? (
+         
+            <ProductCard product={products} /> // Ensure each product has a unique id
+          )
+         : (
+          <div>No products available</div>
+        )}
+      </div>
+    </div>
   );
 };
 
-export default Productcomp;
+
+export default Productcomp

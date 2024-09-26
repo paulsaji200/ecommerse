@@ -94,7 +94,7 @@ const cartSlice = createSlice({
       // Delete Cart Item
       .addCase(deleteCartAsync.fulfilled, (state, action) => {
         const productId = action.payload;
-        state.cart.products = state.cart.products.filter(product => product.productId._id !== productId); // Remove deleted item from state
+        state.cart.products = state.cart.products.filter(product => product.productId._id !== productId); 
       })
       .addCase(deleteCartAsync.rejected, (state, action) => {
         state.error = action.payload;

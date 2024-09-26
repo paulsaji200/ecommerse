@@ -11,6 +11,7 @@ const CategoryManagement = () => {
   const [isListed, setIsListed] = React.useState(true);
   const [editCategoryId, setEditCategoryId] = React.useState(null);
   const [editMode, setEditMode] = React.useState(false);
+  const [errorMessage, setErrorMessage] = React.useState(null); // State for error message
 
   // Fetch categories on component mount
   useEffect(() => {
@@ -20,7 +21,14 @@ const CategoryManagement = () => {
   // Add or edit category
   const handleAddOrEditCategory = () => {
     if (!newCategory) {
-      console.error('Category name cannot be empty');
+      setErrorMessage('Category name cannot be empty');
+      return;
+    }
+
+    // Check if the category already exists
+    const categoryExists = categories.some((category) => category.name.toLowerCase() === newCategory.toLowerCase());
+    if (categoryExists && !editMode) {
+      setErrorMessage('Category already exists');
       return;
     }
 
@@ -41,6 +49,7 @@ const CategoryManagement = () => {
     setIsListed(category.listed);
     setEditCategoryId(category._id);
     setEditMode(true);
+    setErrorMessage(null); // Reset error message when editing starts
   };
 
   // Reset form
@@ -49,6 +58,7 @@ const CategoryManagement = () => {
     setIsListed(true);
     setEditCategoryId(null);
     setEditMode(false);
+    setErrorMessage(null); // Reset error message
   };
 
   if (loading) return <div>Loading...</div>;
@@ -124,6 +134,7 @@ const CategoryManagement = () => {
               </button>
             )}
           </div>
+          {errorMessage && <div className="text-red-500 mt-2">{errorMessage}</div>}
         </div>
       </div>
     </div>

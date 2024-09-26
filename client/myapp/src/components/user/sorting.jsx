@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { FaStar } from 'react-icons/fa';
-import axios from 'axios';
+import { useDispatch } from 'react-redux';
+import { fetchFilteredProducts } from '../../redux/user/getProduct';
 
-const SidebarFilter = ({ onFilterChange }) => {
+const SidebarFilter = () => {
+  const dispatch = useDispatch();
   const [filters, setFilters] = useState({
-    price: [],
+    price: null,
     category: [],
     brand: [],
     rating: null,
@@ -20,19 +21,17 @@ const SidebarFilter = ({ onFilterChange }) => {
     { label: '$5000+', min: 5000, max: Infinity },
   ];
 
-  const categories = ['Earphones', 'Headphones', 'Earbuds', 'Speakers'];
-  const brands = ['Boat', 'Oppo', 'JBL', 'OnePlus'];
+  const categories = [, 'headphones', 'earbuds', 'speaker'];
+  const brands = ['boat', 'Oppo', 'JBL', 'OnePlus'];
   const ratings = [1, 2, 3, 4, 5];
 
   const handleCheckboxChange = (type, value) => {
     setFilters((prevFilters) => {
-      const updatedFilters = {
-        ...prevFilters,
-        [type]: prevFilters[type].includes(value)
-          ? prevFilters[type].filter((item) => item !== value)
-          : [...prevFilters[type], value],
-      };
-      return updatedFilters;
+      const updatedFilters = prevFilters[type].includes(value)
+        ? prevFilters[type].filter((item) => item !== value)
+        : [...prevFilters[type], value];
+
+      return { ...prevFilters, [type]: updatedFilters };
     });
   };
 
@@ -43,85 +42,68 @@ const SidebarFilter = ({ onFilterChange }) => {
     }));
   };
 
-  
-  useEffect(() => {
-    const fetchFilteredProducts = async () => {
-      try {
-        const { price, category, brand, rating, newArrivals, popularity, featured } = filters;
+  const handlePriceChange = (range) => {
+    setFilters((prevFilters) => ({
+      ...prevFilters,
+      price: prevFilters.price && prevFilters.price.min === range.min && prevFilters.price.max === range.max ? null : range,
+    }));
+  };
 
-        const queryParams = new URLSearchParams();
-
-        if (price.length > 0) {
-          const minPrice = Math.min(...price.map((p) => p.min));
-          const maxPrice = Math.max(...price.map((p) => p.max));
-          queryParams.append('price', `${minPrice},${maxPrice}`);
-        }
-
-        if (category.length > 0) {
-          queryParams.append('category', category.join(','));
-        }
-
-        if (brand.length > 0) {
-          queryParams.append('brand', brand.join(','));
-        }
-
-        if (rating) {
-          queryParams.append('rating', rating);
-        }
-
-        if (newArrivals) {
-          queryParams.append('newArrivals', newArrivals);
-        }
-
-        if (popularity) {
-          queryParams.append('popularity', popularity);
-        }
-
-        if (featured) {
-          queryParams.append('featured', featured);
-        }
-
-        const response = await axios.get(`/api/products/filter?${queryParams.toString()}`);
-        onFilterChange(response.data);
-      } catch (error) {
-        console.error('Error fetching filtered products:', error);
-      }
+  const resetFilters = () => {
+    const defaultFilters = {
+      price: null,
+      category: [],
+      brand: [],
+      rating: null,
+      newArrivals: false,
+      popularity: false,
+      featured: false,
     };
 
-    fetchFilteredProducts();
-  }, [filters, onFilterChange]);
+    setFilters(defaultFilters);
+    
+    // Dispatch the reset filters
+    dispatch(fetchFilteredProducts(defaultFilters));
+  };
 
-  const FilterSection = ({ title, children }) => (
-    <div className="mb-6">
-      <h3 className="font-semibold text-lg mb-2">{title}</h3>
-      {children}
-    </div>
-  );
+  useEffect(() => {
+    const formattedFilters = {
+      ...filters,
+      price: filters.price ? JSON.stringify(filters.price) : null,
+      category: filters.category.length > 0 ? filters.category : null,
+      brand: filters.brand.length > 0 ? filters.brand : null,
+    };
+
+    console.log('Dispatching filters:', formattedFilters);
+    dispatch(fetchFilteredProducts(formattedFilters));
+  }, [filters, dispatch]);
 
   return (
-    <div className="w-64 bg-white shadow-lg rounded-lg p-6">
-      <h2 className="text-2xl font-bold mb-6">Filters</h2>
+    <div className="bg-white shadow-lg rounded-lg p-4">
+      <h2 className="text-2xl font-bold mb-4">Filters</h2>
 
       {/* Price Range Filter */}
-      <FilterSection title="Price">
+      <div className="mb-4">
+        <h3 className="font-semibold text-lg mb-2">Price</h3>
         {priceRanges.map((range) => (
-          <div key={range.label} className="flex items-center mb-2">
+          <div key={range.label} className="flex items-center mb-1">
             <input
               type="checkbox"
               id={range.label}
-              checked={filters.price.some((p) => p.min === range.min && p.max === range.max)}
-              onChange={() => handleCheckboxChange('price', range)}
+              checked={filters.price && filters.price.min === range.min && filters.price.max === range.max}
+              onChange={() => handlePriceChange(range)}
               className="mr-2"
             />
             <label htmlFor={range.label}>{range.label}</label>
           </div>
         ))}
-      </FilterSection>
+      </div>
 
       {/* Category Filter */}
-      <FilterSection title="Category">
+      <div className="mb-4">
+        <h3 className="font-semibold text-lg mb-2">Category</h3>
         {categories.map((category) => (
-          <div key={category} className="flex items-center mb-2">
+          <div key={category} className="flex items-center mb-1">
             <input
               type="checkbox"
               id={category}
@@ -132,12 +114,13 @@ const SidebarFilter = ({ onFilterChange }) => {
             <label htmlFor={category}>{category}</label>
           </div>
         ))}
-      </FilterSection>
+      </div>
 
       {/* Brand Filter */}
-      <FilterSection title="Brand">
+      <div className="mb-4">
+        <h3 className="font-semibold text-lg mb-2">Brand</h3>
         {brands.map((brand) => (
-          <div key={brand} className="flex items-center mb-2">
+          <div key={brand} className="flex items-center mb-1">
             <input
               type="checkbox"
               id={brand}
@@ -148,12 +131,13 @@ const SidebarFilter = ({ onFilterChange }) => {
             <label htmlFor={brand}>{brand}</label>
           </div>
         ))}
-      </FilterSection>
+      </div>
 
       {/* Ratings Filter */}
-      <FilterSection title="Average Rating">
+      <div className="mb-4">
+        <h3 className="font-semibold text-lg mb-2">Average Rating</h3>
         {ratings.map((rating) => (
-          <div key={rating} className="flex items-center mb-2">
+          <div key={rating} className="flex items-center mb-1">
             <input
               type="radio"
               id={`rating-${rating}`}
@@ -162,18 +146,19 @@ const SidebarFilter = ({ onFilterChange }) => {
               className="mr-2"
             />
             <label htmlFor={`rating-${rating}`} className="flex items-center">
-              {[...Array(rating)].map((_, index) => (
-                <FaStar key={index} className="text-yellow-400 mr-1" />
+              {Array.from({ length: rating }, (_, index) => (
+                <span key={index} className="text-yellow-400">★</span>
               ))}
-              {rating === 1 ? ' star' : ' stars'} & up
+              & up
             </label>
           </div>
         ))}
-      </FilterSection>
+      </div>
 
       {/* Other Filters */}
-      <FilterSection title="Other Filters">
-        <div className="flex items-center mb-2">
+      <div className="mb-4">
+        <h3 className="font-semibold text-lg mb-2">Other Filters</h3>
+        <div className="flex items-center mb-1">
           <input
             type="checkbox"
             id="newArrivals"
@@ -183,7 +168,7 @@ const SidebarFilter = ({ onFilterChange }) => {
           />
           <label htmlFor="newArrivals">New Arrivals</label>
         </div>
-        <div className="flex items-center mb-2">
+        <div className="flex items-center mb-1">
           <input
             type="checkbox"
             id="popularity"
@@ -193,7 +178,7 @@ const SidebarFilter = ({ onFilterChange }) => {
           />
           <label htmlFor="popularity">Most Popular</label>
         </div>
-        <div className="flex items-center mb-2">
+        <div className="flex items-center mb-1">
           <input
             type="checkbox"
             id="featured"
@@ -203,7 +188,15 @@ const SidebarFilter = ({ onFilterChange }) => {
           />
           <label htmlFor="featured">Featured</label>
         </div>
-      </FilterSection>
+      </div>
+
+      {/* Reset Filters Button */}
+      <button 
+        onClick={resetFilters} 
+        className="mt-4 bg-red-500 text-white rounded py-2 px-4 hover:bg-red-600"
+      >
+        Reset Filters
+      </button>
     </div>
   );
 };

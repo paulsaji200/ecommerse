@@ -4,33 +4,25 @@ import { GrFavorite } from 'react-icons/gr';
 import { IoCartOutline } from 'react-icons/io5';
 import { useNavigate } from 'react-router-dom';
 import { AiOutlineMenu } from 'react-icons/ai'; // Import Hamburger Menu icon
-import axios from 'axios'; // Import axios for API calls
-import api from '../../utils/axios';
+import { fetchProducts } from '../../redux/user/getProduct';
+import { useDispatch } from 'react-redux';
 
 const Nav = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
 
   // Function to handle search input change
   const handleSearchInputChange = (e) => {
     setSearchQuery(e.target.value);
   };
 
- 
   const handleSearchSubmit = async (e) => {
     e.preventDefault(); 
-
-    try {
-
-      const response = await api.get(`/user/products/search?query=${searchQuery}`);
-      setSearchResults(response.data); // Set the results
-      console.log(response.data); // You can handle the search results here, maybe redirect to a search results page
-    } catch (error) {
-      console.error('Error fetching search results:', error);
-    }
+    dispatch(fetchProducts({ queryString: `query=${searchQuery}` })); // Ensure searchQuery is set
   };
+  
 
   return (
     <header className="h-16 shadow-md fixed top-0 left-0 w-full bg-gray-100 z-50">
@@ -73,7 +65,7 @@ const Nav = () => {
 
           {/* Cart Icon */}
           <div className="flex items-center justify-center relative">
-            <span className="h-8 w-8 flex items-center justify-center cursor-pointer text-black text-xl">
+            <span onClick={() => navigate("/cart")} className="h-8 w-8 flex items-center justify-center cursor-pointer text-black text-xl">
               <IoCartOutline />
             </span>
             <p className="text-black absolute top-0 -right-1 text-sm">0</p>

@@ -17,6 +17,7 @@ import axios from "axios"
 
 import crypto from "crypto"
 import dotenv from 'dotenv';
+import { error } from "console";
 dotenv.config();
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_OAUTH_CLIENT_ID;
@@ -235,7 +236,7 @@ export const addAddress = async (req, res) => {
       alternate,
     } = req.body.data;
 
-    // Create a new address entry
+    
     const newAddress = new Address({
       userId: userId,
       name,
@@ -271,20 +272,18 @@ export const getAddress = async (req, res) => {
 };
 
 
-// Delete address by ID
 export const deleteAddress = async (req, res) => {
-  const addressId = req.params.id;  // Address ID from the request params
-  const userId = req.user.id;  // Assuming user authentication middleware sets req.user
+  const addressId = req.params.id;  
+  const userId = req.user.id; 
 
   try {
-    // Find the address by ID and make sure it belongs to the authenticated user
+   
     const address = await Address.findOne({ _id: addressId, userId });
 
     if (!address) {
       return res.status(404).json({ message: 'Address not found or not authorized' });
     }
 
-    // Delete the address
     await Address.findByIdAndDelete(addressId);
 
     res.status(200).json({ message: 'Address deleted successfully' });
@@ -294,7 +293,30 @@ export const deleteAddress = async (req, res) => {
   }
 };
 
+export const editAddress =  async (req, res) => {
+   
+  console.log(req.body)
+  const { id } = req.params;
+  const updatedData = req.body;
 
+  try {
+  
+    const address = await Address.findById(id);
+    if (!address) {
+      return res.status(404).json({ message: 'Address not found' });
+    }
+    
+    
+    
+
+    const updatedAddress = await Address.findByIdAndUpdate(id, updatedData, { new: true });
+    
+    res.status(200).json(updatedAddress);
+  } catch (error) {
+    console.error('Error updating address:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
 
 export const forgetpassword = async(req,res)=>{
 const {email}= req.body
@@ -380,6 +402,27 @@ console.log({ user_id, token, password })
   } catch (error) {
     console.error('Error during password reset:', error);
     res.status(500).json({ message: 'Server error', error });
+  }
+};
+
+
+
+export const userProfile = async (req, res) => {
+  console.log("Fetching user profile...");
+  const userId = req.user.id; 
+
+  try {
+    
+    const data = await Users.findById(userId);
+
+    if (!data) {
+      return res.status(400).send({ message: "No user found" });
+    }
+
+    return res.status(200).json(data); 
+  } catch (error) {
+    console.error("Error fetching user profile:", error);
+    return res.status(500).send({ message: "Server error" }); 
   }
 };
 

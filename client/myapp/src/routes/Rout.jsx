@@ -27,6 +27,8 @@ import CheckoutPage from "../components/user/checkout";
 import OrderManagement from "../components/admin/orders";
 import EnterEmailComponent from "../components/user/enteremail";
 import EnterPasswordComponent from "../components/user/newpassword";
+import Addaddresspage from "../pages/user/Addaddresspage";
+import AdminOrderDetails from "../components/admin/orderdeatils";
 const Router = createBrowserRouter([
   {
     path: "/",
@@ -100,7 +102,7 @@ const Router = createBrowserRouter([
       },
       {
         path: "addaddress",
-        element: <AddressForm />,
+        element: <Addaddresspage />,
       }
     ],
   },
@@ -138,6 +140,10 @@ const Router = createBrowserRouter([
         path: "addproduct",
         element: <Addproduct />,
       },
+      {
+        path:"vieworderdetails/:orderId",
+        element:<AdminOrderDetails />
+      }
     ],
   },
   {

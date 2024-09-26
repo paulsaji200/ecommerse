@@ -10,7 +10,7 @@ const Profilesidebar = () => {
           alt="User Avatar" 
           className="rounded-full mx-auto mb-2"
         />
-        <h2 className="text-xl font-semibold text-green-400">Hello, Megan Markle</h2>
+        <h2 className="text-xl font-semibold text-green-400">Hello User</h2>
       </div>
 
       <nav>
