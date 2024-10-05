@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import  { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import axios from "axios";
+
 import { useGoogleLogin } from "@react-oauth/google";
 import { FcGoogle } from "react-icons/fc"; // Google Icon Import
 import api from "../../utils/axios";

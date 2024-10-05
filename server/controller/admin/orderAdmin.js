@@ -1,6 +1,8 @@
 import Order from "../../models/order.js";
 import Users from "../../models/userModel.js";
 import Product from "../../models/productModel.js";
+import Coupon from "../../models/Coupon.js";
+
 export const getOrders = async (req, res) => {
     try {
       const orders = await Order.find({});
@@ -88,4 +90,55 @@ export const getOrders = async (req, res) => {
       res.status(500).json({ message: 'Failed to update order', error });
     }
   };
+
   
+  
+export const getCoupen =  async (req, res) => {
+    try {
+      console.log("get")
+      const coupons = await Coupon.find();
+      res.status(200).json(coupons);
+    } catch (error) {
+      res.status(500).json({ message: 'Error fetching coupons', error });
+    }
+  };
+  
+  // POST create a new coupon
+  export const createCoupon = async (req, res) => {
+    const { code, discount, expiryDate,minPurchase,maxPurchase } = req.body;
+  
+    try {
+      console.log("create")
+  
+      const existingCoupon = await Coupon.findOne({ code });
+      if (existingCoupon) {
+        return res.status(400).json({ message: 'Coupon code already exists' });
+      }
+  
+      const newCoupon = new Coupon({
+        code,
+        discount,
+        expiryDate: new Date(expiryDate),
+        minPurchase,
+          maxPurchase
+      });
+  
+      const savedCoupon = await newCoupon.save();
+      res.status(201).json({ message: 'Coupon created successfully', coupon: savedCoupon });
+    } catch (error) {
+      res.status(500).json({ message: 'Error creating coupon', error });
+    }
+  };
+
+  export const deleteCoupon = async (req, res) => {
+    try {
+      const coupon = await Coupon.findByIdAndDelete(req.params.id);
+      if (!coupon) {
+        return res.status(404).json({ message: 'Coupon not found' });
+      }
+      res.status(200).json({ message: 'Coupon deleted successfully' });
+    } catch (error) {
+      res.status(500).json({ message: 'Error deleting coupon', error });
+    }
+  };
+  export default getOrders

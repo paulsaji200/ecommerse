@@ -7,6 +7,7 @@ import mongoose from "mongoose";
 import jwt from 'jsonwebtoken';
 import Address from "../../models/addressMode.js"
 import Order from "../../models/order.js";
+import Coupon from "../../models/Coupon.js";
 export const addToCart = async (req, res) => {
   try {
     const userId = req.user.id; 
@@ -66,7 +67,7 @@ export const getCart = async (req, res) => {
     console.log('User ID:', userId);
 
     const cart = await Cart.findOne({ userId });
-    console.log(cart)
+  
     //  cart = await Cart.findOne({ userId }).populate('products.productId');
 
    
@@ -163,10 +164,11 @@ export const cartupdate = async (req, res) => {
     
 
     const createOrder = async (req, res) => {
+      console.log("create")
       const userId = req.user.id;
       const { orderData } = req.body;
       const address = orderData.address;
-    
+         console.log("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk")
       console.log(orderData);
     
       try {
@@ -186,6 +188,7 @@ export const cartupdate = async (req, res) => {
             status: 'Ordered',
           })),
           totalPrice: orderData.totalPrice,
+          couponAmount:orderData.discount,
           shippingAddress: {
             street: address.street,
             city: address.city,
@@ -217,9 +220,10 @@ export const cartupdate = async (req, res) => {
             return res.status(400).json({ error: `Not enough stock for product ${product.name}` });
           }
         }
-    
-      
-        res.status(201).json(savedOrder);
+       console.log('ggggggggggggggggggggggggggggggggg')
+        
+       res.status(200).json(savedOrder)
+        
       } catch (error) {
         console.error('Error creating order:', error);
         res.status(500).json({ error: 'Failed to create order' });
@@ -269,6 +273,76 @@ export const UserCancelOrder = async (req,res)=>{
 
 }
 
+
+export const rz = async(req,res)=>{
+ 
+  const razorpay = new  newRazorpay({
+key_id : " rzp_test_homhAZdqfLrL9E",
+key_secret : "cLeCN0YNzzNonfCUw12LPTtW"
+  })
+const options = req.body;
+  const order = await razorpay.orders.create(options);
+
+}
+export const getCoupon = async (req, res) => {
+  const { amount } = req.query;
+  console.log(amount)
+
+  try {
+    
+    const coupons = await Coupon.find({
+      $and: [
+        { maxPurchase: { $gte: amount } }, 
+        { minPurchase: { $lte: amount } }
+      ]
+    });
+
+    
+    if (coupons.length === 0) {
+      return res.status(404).json({ message: 'No coupons found for the specified amount.' });
+    }
+
+    // Send the found coupons
+    return res.status(200).json(coupons);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'An error occurred while retrieving coupons.' });
+  }
+};
+
+export const couponsapply = async (req, res) => {
+  const { couponCode, totalPrice } = req.body;
+
+  try {
+    // Find the coupon in the database
+    const coupon = await Coupon.findOne({ code: couponCode });
+
+    // Check if the coupon exists
+    if (!coupon) {
+      return res.status(400).json({ success: false, message: 'Invalid coupon code.' });
+    }
+
+    // Check if the total price meets the coupon's requirements
+    if (totalPrice < coupon.minPurchase || totalPrice > coupon.maxPurchase) {
+      return res.status(400).json({
+        success: false,
+        message: `Coupon can only be applied on amounts between ₹${coupon.minPurchase} and ₹${coupon.maxPurchase}.`,
+      });
+    }
+
+    // Calculate the discount based on the percentage
+    const discountAmount = (totalPrice * coupon.discount) / 100;
+console.log(discountAmount)
+    // Optionally, ensure the discount does not exceed the maximum discount allowed
+    const maxDiscount = coupon.amount || Infinity; // If no max discount, use Infinity
+    const finalDiscount = Math.min(discountAmount, maxDiscount);
+
+    res.json({ success: true, discountAmount: finalDiscount });
+  } catch (error) {
+    console.error('Error applying coupon:', error);
+    res.status(500).json({ success: false, message: 'Server error. Please try again.' });
+  }
+};
 
 
     

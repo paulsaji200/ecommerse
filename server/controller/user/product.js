@@ -9,7 +9,7 @@ import Address from "../../models/addressMode.js";
 import Order from "../../models/order.js";
 
 const getproduct = async (req, res) => {
-  console.log("Product model:", mongoose.models["Product"]);
+
   try {
     const data = await Product.find({ deleted: false });
 
@@ -193,7 +193,7 @@ export const filter = async (req, res) => {
 
   try {
     const products = await Product.find(filters).sort(sort);
-    console.log("Filtered products:", { products });
+  
 
     if (products.length === 0) {
       console.log("No products found with the applied filters.");

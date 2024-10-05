@@ -29,6 +29,7 @@ import EnterEmailComponent from "../components/user/enteremail";
 import EnterPasswordComponent from "../components/user/newpassword";
 import Addaddresspage from "../pages/user/Addaddresspage";
 import AdminOrderDetails from "../components/admin/orderdeatils";
+import CouponManagement from "../pages/admin/addcoupen";
 const Router = createBrowserRouter([
   {
     path: "/",
@@ -139,6 +140,10 @@ const Router = createBrowserRouter([
       {
         path: "addproduct",
         element: <Addproduct />,
+      },
+      {
+        path: "addcoupon",
+        element: <CouponManagement />,
       },
       {
         path:"vieworderdetails/:orderId",

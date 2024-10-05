@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import Product from "./productModel.js  ";
 
 const userSchema = new mongoose.Schema({
   name: {
@@ -15,6 +16,8 @@ const userSchema = new mongoose.Schema({
   password: {
     type: String,
   },
+  wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }]
+,
   blocked: {
     type: Boolean,
     default: false,

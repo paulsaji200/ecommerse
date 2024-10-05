@@ -69,6 +69,24 @@ const EditProductPage = () => {
     const { name, value } = e.target;
     setProductData({ ...productData, [name]: value });
   };
+  const deleteImage = async (img, pid) => {
+    console.log(img,pid)
+    try {
+      const response = await api.delete(`/admin/deleteimageproduct`, {
+        params: {
+          img: img,
+          pid: pid
+        }
+      });
+      
+      
+      console.log("Image deleted successfully:", response.data);
+    } catch (error) {
+      // Handle error
+      console.error("Error deleting image:", error);
+    }
+  };
+  
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
@@ -347,10 +365,14 @@ const EditProductPage = () => {
                       (_, i) => i !== index
                     );
                     setImagePreviews(newImages);
+                    deleteImage(img,productId);
                   }}
                   className="absolute top-0 right-0 text-red-500"
+
+                  
+
                 >
-                  <FaTimes />
+                  < FaTimes />
                 </button>
               </div>
             ))}

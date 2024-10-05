@@ -238,5 +238,39 @@ export const unDeleteProduct = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+export const deleteImageProduct = async (req,res)=>{
+  
+    try {
+      
+      const { img, pid } = req.query;
+      console.log(img,pid)
+  
+      if (!img || !pid) {
+        return res.status(400).json({ message: "Image URL and Product ID are required" });
+      }
+  
+      // Find the product by its ID
+      const product = await Product.findById(pid);
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+  
+      // Remove the image from the images array
+      product.images = product.images.filter((image) => image !== img);
+  
+      // Save the updated product document
+      await product.save();
+  
+      // Return a success response
+      res.status(200).json({ message: "Image deleted successfully", product });
+    } catch (error) {
+      // Handle server errors
+      console.error("Error deleting image:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  }
+
+
+
 
 export default addproduct;

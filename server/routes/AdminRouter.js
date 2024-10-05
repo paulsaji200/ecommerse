@@ -1,8 +1,8 @@
 import express from "express"
 import adminLogin, { admintokenVerify } from "../controller/admin/Admincontroller.js";
-import addproduct, { addcategory, deletecategory, deleteProduct, editCategory, editProduct, getcategories, geteditproduct, getproductAdmin, unDeleteProduct, viewcustomer } from "../controller/admin/productAdmin.js";
+import addproduct, { addcategory, deletecategory, deleteImageProduct, deleteProduct, editCategory, editProduct, getcategories, geteditproduct, getproductAdmin, unDeleteProduct, viewcustomer } from "../controller/admin/productAdmin.js";
 import { userstatus } from "../controller/admin/userManagement.js";
-import { editOrderStatus, getOrders, orderdetails } from "../controller/admin/orderAdmin.js";
+import { createCoupon, deleteCoupon, editOrderStatus, getCoupen, getOrders, orderdetails } from "../controller/admin/orderAdmin.js";
 import { updateOrderStatus } from "../controller/admin/orderAdmin.js";
 const adminRouter = express.Router();
 
@@ -24,5 +24,9 @@ adminRouter.get("/admintoken-verify",admintokenVerify)
 adminRouter.get("/orders/:id",orderdetails)
 adminRouter.put('/updateorders/:orderId/:productId', updateOrderStatus);
 adminRouter.patch('/orders/:orderId',editOrderStatus)
+adminRouter.get("/getCoupon",getCoupen)
+adminRouter.post("/createcoupon",createCoupon)
+adminRouter.delete("/deleteCoupon",deleteCoupon)
+adminRouter.delete("/deleteimageproduct",deleteImageProduct)
 
 export default adminRouter

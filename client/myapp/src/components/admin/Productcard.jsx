@@ -11,19 +11,23 @@ import { selectError } from '../../redux/user/getProduct';
 import { selectLoading } from '../../redux/user/getProduct';
 import { fetchProducts } from '../../redux/user/getProduct';
 import SidebarFilter from '../user/sorting';
-import Nav from '../global/Nav';
+
+import { Heart } from 'lucide-react';
+
 export const ProductCard = ({ product }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  
+
   // Using local state to track which product has been added to the cart
   const [addedToCart, setAddedToCart] = useState({});
+  // Using local state to track wishlist status
+  const [inWishlist, setInWishlist] = useState({});
 
   // Handle adding product to cart and toggle button to "Go to Cart"
   const handleAddToCart = (event, product) => {
     event.stopPropagation();
     dispatch(addToCartAsync(product));
-    setAddedToCart(prevState => ({ ...prevState, [product._id]: true }));  // Set product as added
+    setAddedToCart(prevState => ({ ...prevState, [product._id]: true }));
   };
 
   // Handle navigation to product details
@@ -34,7 +38,21 @@ export const ProductCard = ({ product }) => {
   // Handle navigation to the cart
   const goToCart = (event) => {
     event.stopPropagation();
-    navigate('/cart');  // Assuming your cart route is '/cart'
+    navigate('/cart');
+  };
+
+  // Handle toggling wishlist status
+  const toggleWishlist = (event, productId) => {
+
+     const response = api.post(`/user/addtowishlist${productId}`,{withcredential:true})
+          
+
+    event.stopPropagation();
+    setInWishlist(prevState => ({
+      ...prevState,
+      [productId]: !prevState[productId]
+    }));
+    // Here you would typically dispatch an action to update the wishlist in your global state or backend
   };
 
   return (
@@ -42,9 +60,19 @@ export const ProductCard = ({ product }) => {
       {product.map((productItem) => (
         <div
           key={productItem._id}
-          className="w-64 h-auto rounded overflow-hidden shadow-lg bg-white p-4 flex flex-col mb-12"
-          onClick={() => handleCardClick(productItem._id)}  // Navigate to product details on card click
+          className="w-64 h-auto rounded overflow-hidden shadow-lg bg-white p-4 flex flex-col mb-12 relative"
+          onClick={() => handleCardClick(productItem._id)}
         >
+          {/* Wishlist heart icon */}
+          <button
+            className="absolute top-2 right-2 z-10 p-1 rounded-full bg-white shadow-md"
+            onClick={(e) => toggleWishlist(e, productItem._id)}
+          >
+            <Heart
+              className={`h-6 w-6 ${inWishlist[productItem._id] ? 'text-red-500 fill-current' : 'text-gray-400'}`}
+            />
+          </button>
+
           <img
             className="w-full h-60 object-cover"
             src={productItem.images[0] || 'https://via.placeholder.com/150'}
@@ -72,7 +100,7 @@ export const ProductCard = ({ product }) => {
             {addedToCart[productItem._id] ? (
               <button
                 className="bg-green-500 text-white font-bold py-1 px-2 rounded hover:bg-green-700 w-full text-sm"
-                onClick={goToCart}  // Navigate to the cart
+                onClick={goToCart}
               >
                 Go to Cart
               </button>
@@ -80,7 +108,7 @@ export const ProductCard = ({ product }) => {
               <button
                 className={`bg-blue-500 text-white font-bold py-1 px-2 rounded hover:bg-blue-700 w-full text-sm ${productItem.quantity === 0 ? 'cursor-not-allowed opacity-50' : ''}`}
                 disabled={productItem.quantity === 0}
-                onClick={(event) => handleAddToCart(event, productItem)}  // Add product to cart
+                onClick={(event) => handleAddToCart(event, productItem)}
               >
                 {productItem.quantity > 0 ? 'Add to Cart' : 'Sold Out'}
               </button>
@@ -91,6 +119,7 @@ export const ProductCard = ({ product }) => {
     </div>
   );
 };
+
 
 
 export const Productcomp = () => {

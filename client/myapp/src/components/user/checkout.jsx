@@ -4,6 +4,7 @@ import { getCartAsync } from '../../redux/user/Cart';
 import api from '../../utils/axios';
 import { useNavigate } from 'react-router-dom';
 import Nav from '../global/Nav';
+import axios from 'axios';
 
 const CheckoutPage = () => {
   const dispatch = useDispatch();
@@ -14,14 +15,16 @@ const CheckoutPage = () => {
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [subtotal, setSubtotal] = useState(0);
   const [total, setTotal] = useState(0);
+  const [discount, setDiscount] = useState(0);
+  const [coupons, setCoupons] = useState([]);
+  const [selectedCoupon, setSelectedCoupon] = useState(null);
+  const [couponError, setCouponError] = useState('');
   const [orderSuccess, setOrderSuccess] = useState(false);
 
   useEffect(() => {
-    dispatch(getCartAsync());
-  }, [dispatch]);
+    const fetchCartAndAddresses = async () => {
+      dispatch(getCartAsync()); // Fetch the cart
 
-  useEffect(() => {
-    const fetchAddresses = async () => {
       try {
         const response = await api.get('/user/getaddress', { withCredentials: true });
         setAddresses(response.data);
@@ -33,13 +36,34 @@ const CheckoutPage = () => {
       }
     };
 
-    fetchAddresses();
-  }, []);
+    fetchCartAndAddresses();
+  }, [dispatch]);
+
+  useEffect(() => {
+    const fetchCoupons = async () => {
+      if (!cart || !cart.totalPrice) return; // Added check for cart and totalPrice
+
+      try {
+        const response = await api.get('/user/getcoupon', {
+          params: { amount: cart.totalPrice },
+          withCredentials: true,
+        });
+ console.log(response.data)
+        setCoupons(response.data);
+      } catch (error) {
+        console.error('Failed to fetch coupons', error);
+      }
+    };
+
+    if (cart && cart.totalPrice > 0) {
+      fetchCoupons();
+    }
+  }, [cart]);
 
   useEffect(() => {
     if (cart && cart.products) {
       setSubtotal(cart.totalPrice);
-      setTotal(cart.totalPrice); 
+      setTotal(cart.totalPrice);
     }
   }, [cart]);
 
@@ -53,13 +77,67 @@ const CheckoutPage = () => {
     setSelectedPayment(method);
   };
 
+  const loadRazorpay = async () => {
+    return new Promise((resolve) => {
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => {
+        resolve(true);
+      };
+      script.onerror = () => {
+        resolve(false);
+      };
+      document.body.appendChild(script);
+    });
+  };
+
+  const handleApplyCoupon = async (coupon) => {
+    try {
+      const response = await api.post(
+        'user/couponapply',
+        { couponCode: coupon.code, totalPrice: subtotal },
+        { withCredentials: true }
+      );
+
+      if (response.data.success) {
+        setDiscount(response.data.discountAmount);
+        setTotal(subtotal - response.data.discountAmount);
+        setSelectedCoupon(coupon);
+        setCouponError('');
+      } else {
+        setCouponError(response.data.message || 'Invalid coupon code.');
+      }
+    } catch (error) {
+      console.error('Failed to apply coupon', error);
+      setCouponError('Failed to apply coupon. Please try again.');
+    }
+  };
+
+  const handleRemoveCoupon = async () => {
+    if (!selectedCoupon) return;
+
+    try {
+      await api.post('/coupons/remove', { couponCode: selectedCoupon.code }, { withCredentials: true });
+      setDiscount(0);
+      setTotal(subtotal);
+      setSelectedCoupon(null);
+    } catch (error) {
+      console.error('Failed to remove coupon', error);
+    }
+  };
   const handlePlaceOrder = async () => {
     if (!selectedAddress || !selectedPayment) {
       alert('Please select a delivery address and payment method.');
       return;
     }
-
+  
     try {
+      const isRazorpayLoaded = await loadRazorpay();
+      if (!isRazorpayLoaded && selectedPayment === 'Razorpay') {
+        alert('Razorpay SDK failed to load. Please check your internet connection.');
+        return;
+      }
+  
       const orderData = {
         address: {
           street: selectedAddress.address,
@@ -74,121 +152,202 @@ const CheckoutPage = () => {
           quantity: item.quantity,
           price: item.price,
         })),
+        discount: discount,
         totalPrice: total,
       };
-
-      console.log(orderData);
-      await api.post('/user/createorder', { orderData }, { withCredentials: true });
-
-      setOrderSuccess(true);
-      await api.delete("/user/clearcart", { withCredentials: true });
-
-      setTimeout(() => {
-        setOrderSuccess(false);
-        navigate("/");
-      }, 2000);
+  
+      const orderRes = await api.post('/user/createorder', { orderData }, { withCredentials: true });
+      const order = orderRes.data;
+  
+      if (selectedPayment === 'Razorpay') {
+        const options = {
+          key: 'rzp_test_homhAZdqfLrL9E',
+          amount: order.totalPrice, // In paise
+          currency: 'INR',
+          name: 'Your Store Name',
+          description: 'Test Transaction',
+          image: '/your_logo.png',
+          order_id: order.id,
+          handler: async (response) => {
+            const razorpay_payment_id = response.razorpay_payment_id;
+           console.log(order._id)
+            // Send verification request to backend
+            const paymentVerification = await axios.post('http://localhost:5000/verify-payment', {
+              razorpay_payment_id: razorpay_payment_id,
+              amount: order.totalPrice, // Ensure this matches the amount in paise
+              orderId: order._id //
+            }, { withCredentials: true });
+  
+            if (paymentVerification.data.success) {
+              setOrderSuccess(true);
+              await api.delete('/user/clearcart', { withCredentials: true });
+              setTimeout(() => {
+                setOrderSuccess(false);
+                navigate('/');
+              }, 2000);
+            } else {
+              alert('Payment verification failed. Please try again.');
+            }
+          },
+          prefill: {
+            name: 'John Doe',
+            email: 'johndoe@example.com',
+            contact: '9999999999',
+          },
+          theme: {
+            color: '#3399cc',
+          },
+        };
+  
+        const paymentObject = new window.Razorpay(options);
+        paymentObject.open();
+      } else {
+        // Handle Cash on Delivery (COD) scenario
+        setOrderSuccess(true);
+        await api.delete('/user/clearcart', { withCredentials: true });
+        setTimeout(() => {
+          setOrderSuccess(false);
+          navigate('/');
+        }, 2000);
+      }
     } catch (error) {
       console.error('Failed to place order', error);
       alert('Failed to place the order. Please try again.');
     }
   };
+  
 
   if (!cart || !cart.products || cart.products.length === 0) {
     return <p>Your cart is empty. Please add items to your cart before proceeding.</p>;
   }
 
   return (
-    <div className="flex flex-col md:flex-row p-24 max-w-4xl mx-auto">
-      <Nav />
-      <div className="md:w-2/3 pr-4 mt-8"> {/* Increased margin-top */}
-        <h1 className="text-2xl font-bold mb-4">CHECKOUT</h1>
+    <div className="bg-gray-100 min-h-screen py-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="bg-white shadow-lg rounded-lg overflow-hidden">
+          <div className="flex flex-col lg:flex-row p-6 gap-8">
+            <Nav />
+            <div className="lg:w-2/3">
+              <h1 className="text-3xl font-bold mb-6 text-gray-800">CHECKOUT</h1>
 
-        {orderSuccess && (
-          <div className="bg-green-200 text-green-800 p-2 mb-4 rounded">
-            Order placed successfully!
-          </div>
-        )}
+              {orderSuccess && (
+                <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6 rounded-r">
+                  Order placed successfully!
+                </div>
+              )}
 
-        <div className="flex mb-4">
-          {cart.products.map((item) => (
-            <img
-              key={item.productId._id}
-              src={item.productId.images[0]}
-              alt={item.productId.name}
-              className="mr-2 w-16 h-16 object-cover"
-            />
-          ))}
-        </div>
-        <p className="text-green-600 mb-4">
-          Arrives By {new Date().toLocaleDateString()}
-        </p>
-        <div className="mb-4">
-          <h2 className="font-bold">Delivery Address</h2>
-          <select
-            className="w-full p-2 border rounded mb-2"
-            value={selectedAddress ? selectedAddress._id : ''}
-            onChange={handleAddressChange}
-          >
-            {addresses.map((addr) => (
-              <option key={addr._id} value={addr._id}>
-                {addr.name} - {addr.location}
-              </option>
-            ))}
-          </select>
-          {selectedAddress && (
-            <>
-              <p>{selectedAddress.name}</p>
-              <p>{selectedAddress.location}</p>
-              <p>{selectedAddress.pincode}</p>
-              <p>Mobile: {selectedAddress.mobile}</p>
-            </>
-          )}
-        </div>
-        <div className="mb-4">
-          <h2 className="font-bold">Payment Method</h2>
-          {['Debit Card / Credit Card', 'UPI Method', 'Internet Banking', 'Wallet', 'Cash on Delivery'].map(
-            (method, index) => (
-              <div key={index} className="flex items-center mb-2">
-                <input
-                  type="radio"
-                  id={`payment-${index}`}
-                  name="payment"
-                  value={method}
-                  checked={selectedPayment === method}
-                  onChange={() => handlePaymentChange(method)}
-                  className="mr-2"
-                />
-                <label htmlFor={`payment-${index}`} className="flex items-center">
-                  {method === 'Cash on Delivery' && <span className="mr-2">🚚</span>}
-                  {method}
-                </label>
+              <div className="flex mb-6 gap-4 overflow-x-auto">
+                {cart.products.map((item) => (
+                  <img
+                    key={item.productId._id}
+                    src={item.productId.images[0]}
+                    alt={item.productId.name}
+                    className="w-20 h-20 object-cover rounded-md shadow"
+                  />
+                ))}
               </div>
-            )
-          )}
-        </div>
-        <button onClick={handlePlaceOrder} className="bg-red-800 text-white px-4 py-2 rounded">
-          Place Order
-        </button>
-      </div>
-      <div className="md:w-1/3 mt-4 md:mt-0">
-        <div className="border p-4 rounded">
-          <h2 className="font-bold mb-2">ORDER SUMMARY</h2>
-          <div className="flex justify-between mb-2">
-            <span>{cart.products.length} ITEMS</span>
-            <span>₹{subtotal.toLocaleString()}</span>
+
+              <p className="text-green-600 mb-6 font-medium">
+                Arrives By {new Date().toLocaleDateString()}
+              </p>
+
+              <div className="mb-6">
+                <h2 className="text-xl font-semibold mb-3 text-gray-700">Delivery Address</h2>
+                <select
+                  className="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 mb-3"
+                  value={selectedAddress ? selectedAddress._id : ''}
+                  onChange={handleAddressChange}
+                >
+                  {addresses.map((addr) => (
+                    <option key={addr._id} value={addr._id}>
+                      {addr.name} - {addr.location}
+                    </option>
+                  ))}
+                </select>
+                {selectedAddress && (
+                  <p className="text-gray-700">
+                    {selectedAddress.address}, {selectedAddress.city}, {selectedAddress.state} - {selectedAddress.pincode}
+                  </p>
+                )}
+              </div>
+
+              {/* Coupons Section */}
+              <div className="mb-6">
+                <h2 className="text-xl font-semibold mb-3 text-gray-700">Coupons</h2>
+                {coupons.length > 0 ? (
+                  <div className="grid gap-3 mb-4">
+                    {coupons.map((coupon) => (
+                      <div key={coupon.code} className="border p-4 rounded-md flex justify-between items-center">
+                        <div>
+                          <p className="font-semibold">{coupon.code}</p>
+                          <p className="text-gray-500">{coupon.description}</p>
+                        </div>
+                        {selectedCoupon && selectedCoupon.code === coupon.code ? (
+                          <button
+                            className="bg-red-500 text-white px-4 py-2 rounded-md"
+                            onClick={handleRemoveCoupon}
+                          >
+                            Remove
+                          </button>
+                        ) : (
+                          <button
+                            className="bg-blue-600 text-white px-4 py-2 rounded-md"
+                            onClick={() => handleApplyCoupon(coupon)}
+                          >
+                            Apply
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500">No coupons available.</p>
+                )}
+                {couponError && <p className="text-red-500">{couponError}</p>}
+              </div>
+
+              <div className="mb-6">
+                <h2 className="text-xl font-semibold mb-3 text-gray-700">Payment Method</h2>
+                {['Razorpay', 'Cash On Delivery'].map((method) => (
+                  <label key={method} className="flex items-center mb-3">
+                    <input
+                      type="radio"
+                      value={method}
+                      checked={selectedPayment === method}
+                      onChange={() => handlePaymentChange(method)}
+                      className="form-radio h-5 w-5 text-blue-600"
+                    />
+                    <span className="ml-2 text-gray-700">{method}</span>
+                  </label>
+                ))}
+              </div>
+
+              <button
+                className="bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 transition duration-300 w-full"
+                onClick={handlePlaceOrder}
+              >
+                PLACE ORDER
+              </button>
+            </div>
+
+            <div className="lg:w-1/3">
+              <h2 className="text-2xl font-semibold mb-3 text-gray-700">Order Summary</h2>
+              <div className="p-6 bg-gray-50 rounded-md shadow-md mb-6">
+                <div className="flex justify-between mb-4">
+                  <p className="text-gray-600">Subtotal</p>
+                  <p className="text-gray-900 font-medium">₹{subtotal}</p>
+                </div>
+                <div className="flex justify-between mb-4">
+                  <p className="text-gray-600">Discount</p>
+                  <p className="text-green-600 font-medium">- ₹{discount}</p>
+                </div>
+                <div className="flex justify-between mb-6 border-t pt-4">
+                  <p className="text-gray-700 font-semibold">Total</p>
+                  <p className="text-gray-900 font-bold">₹{total}</p>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="flex justify-between mb-2">
-            <span>Delivery Charges</span>
-            <span>Free</span>
-          </div>
-         
-          <div className="flex justify-between font-bold">
-            <span>TOTAL</span>
-            <span>₹{total.toLocaleString()}</span>
-          </div>
-          <button onClick={handlePlaceOrder} className="bg-red-800 text-white px-4 py-2 rounded w-full mt-4">
-            Place Order
-          </button>
         </div>
       </div>
     </div>
