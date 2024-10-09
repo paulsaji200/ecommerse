@@ -426,4 +426,26 @@ export const userProfile = async (req, res) => {
   }
 };
 
+export const editProfile = async (req, res) => {
+  const userId = req.user.id; // Assuming req.user contains the authenticated user data
+  const { email, name, phoneNumber } = req.body;
+
+  try {
+   
+    const updatedUser = await Users.findByIdAndUpdate(
+      userId, 
+      { $set: { email, phoneNumber, name } },
+      { new: true } 
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json({ message: "Profile updated successfully", user: updatedUser });
+  } catch (error) {
+    console.error("Error updating user profile:", error);
+    return res.status(500).json({ message: "An error occurred while updating the profile" });
+  }
+};
 export default userRegister;

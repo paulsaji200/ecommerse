@@ -1,5 +1,5 @@
 import express from "express"
-import adminLogin, { admintokenVerify } from "../controller/admin/Admincontroller.js";
+import  adminLogin, { admintokenVerify, salesReport, salesReportDownload } from "../controller/admin/Admincontroller.js";
 import addproduct, { addcategory, deletecategory, deleteImageProduct, deleteProduct, editCategory, editProduct, getcategories, geteditproduct, getproductAdmin, unDeleteProduct, viewcustomer } from "../controller/admin/productAdmin.js";
 import { userstatus } from "../controller/admin/userManagement.js";
 import { createCoupon, deleteCoupon, editOrderStatus, getCoupen, getOrders, orderdetails } from "../controller/admin/orderAdmin.js";
@@ -28,5 +28,7 @@ adminRouter.get("/getCoupon",getCoupen)
 adminRouter.post("/createcoupon",createCoupon)
 adminRouter.delete("/deleteCoupon",deleteCoupon)
 adminRouter.delete("/deleteimageproduct",deleteImageProduct)
+adminRouter.get("/salesreport",salesReport)
+adminRouter.get("/reportdownload",salesReportDownload)
 
 export default adminRouter

@@ -18,6 +18,8 @@ export const getOrdersasync = createAsyncThunk(
 export const cancelOrder = createAsyncThunk(
   'orders/cancelOrder',
   async ({ orderId, productId }, { rejectWithValue }) => {
+    console.log("vvvvvvv")
+    console.log( orderId, productId)
     try {
       const response = await api.patch(
         '/user/cancelOrder', 
@@ -30,7 +32,21 @@ export const cancelOrder = createAsyncThunk(
     }
   }
 );
-
+export const returnOrder = createAsyncThunk(
+  'orders/returnOrder',
+  async ({ orderId, productId }, { rejectWithValue }) => {
+    try {
+      const response = await api.patch(
+        '/user/returnOrder', 
+        { orderId, productId }, 
+        { withCredentials: true }
+      );
+      return { orderId, productId };
+    } catch (error) {
+      return rejectWithValue(error.response?.data || 'Error canceling order');
+    }
+  }
+);
 const ordersSlice = createSlice({
   name: 'orders',
   initialState: {
@@ -62,6 +78,15 @@ const ordersSlice = createSlice({
           const product = order.products.find((p) => p._id === productId);
           if (product) {
             product.status = 'Cancelled'; // Update product status to 'Cancelled'
+          }
+        }
+      }).addCase(returnOrder.fulfilled, (state, action) => {
+        const { orderId, productId } = action.payload;
+        const order = state.orders.find((order) => order._id === orderId);
+        if (order) {
+          const product = order.products.find((p) => p._id === productId);
+          if (product) {
+            product.status = 'Returned'; // Update product status to 'Cancelled'
           }
         }
       })

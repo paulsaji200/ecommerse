@@ -1,28 +1,34 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FaSearch, FaRegUser } from 'react-icons/fa';
 import { GrFavorite } from 'react-icons/gr';
 import { IoCartOutline } from 'react-icons/io5';
 import { useNavigate } from 'react-router-dom';
 import { AiOutlineMenu } from 'react-icons/ai'; // Import Hamburger Menu icon
 import { fetchProducts } from '../../redux/user/getProduct';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
+import { getCartAsync } from '../../redux/user/Cart';
 
 const Nav = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const cart = useSelector((state) => state.cart.cart); // Fetch cart from Redux store
+  const cartItemsCount = cart?.products?.length || 0; // Get the number of items in the cart
 
   // Function to handle search input change
   const handleSearchInputChange = (e) => {
     setSearchQuery(e.target.value);
   };
 
+  useEffect(() => {
+    dispatch(getCartAsync()); // Fetch the cart when component mounts
+  }, [dispatch]);
+
   const handleSearchSubmit = async (e) => {
     e.preventDefault(); 
     dispatch(fetchProducts({ queryString: `query=${searchQuery}` })); // Ensure searchQuery is set
   };
-  
 
   return (
     <header className="h-16 shadow-md fixed top-0 left-0 w-full bg-gray-100 z-50">
@@ -63,12 +69,16 @@ const Nav = () => {
             <GrFavorite />
           </div>
 
-          {/* Cart Icon */}
+          {/* Cart Icon with Cart Item Count */}
           <div className="flex items-center justify-center relative">
             <span onClick={() => navigate("/cart")} className="h-8 w-8 flex items-center justify-center cursor-pointer text-black text-xl">
               <IoCartOutline />
             </span>
-            <p className="text-black absolute top-0 -right-1 text-sm">0</p>
+            {cartItemsCount > 0 && ( // Only show the count if there are items in the cart
+              <p className="text-white bg-red-500 rounded-full w-5 h-5 flex items-center justify-center text-xs absolute top-0 -right-2">
+                {cartItemsCount}
+              </p>
+            )}
           </div>
 
           {/* Login Button */}

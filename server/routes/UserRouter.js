@@ -1,8 +1,8 @@
 
 import express from "express"
-import userRegister, { addAddress, deleteAddress, editAddress, forgetpassword, getAddress, googleReg, Login, resetpassword, sendOtp, userProfile, verifyOtp, verifyUser } from "../controller/user/Usercontroller.js";
-import getproduct, { filter, filterProduct, productdetails, search, serachProduct } from "../controller/user/product.js";
-import createOrder, { addToCart, cartupdate, clearCart, couponsapply, deleteCart, getCart,getCoupon,getOrder } from "../controller/user/order.js";
+import userRegister, { addAddress, deleteAddress, editAddress, editProfile, forgetpassword, getAddress, googleReg, Login, resetpassword, sendOtp, userProfile, verifyOtp, verifyUser } from "../controller/user/Usercontroller.js";
+import getproduct, { addtowishlist, filter, filterProduct, productdetails, search, serachProduct } from "../controller/user/product.js";
+import createOrder, { addToCart, cancelOrder, cartupdate, clearCart, couponsapply, deleteCart, getCart,getCoupon,getOrder, returnOrder } from "../controller/user/order.js";
 import userAuth from "../middlewares/isuserAuth.js";
 
 
@@ -39,4 +39,9 @@ userRouter.get("/getcoupon",getCoupon)
 userRouter.get("/search",search)
 userRouter.get("/filter",filter)
 userRouter.post("/couponapply",couponsapply)
+userRouter.post("/addtowishlist/:product_Id",userAuth,addtowishlist)
+userRouter.patch("/cancelOrder",userAuth,cancelOrder)
+userRouter.patch("/returnOrder",userAuth,returnOrder)
+userRouter.put("/editprofile",userAuth,editProfile)
+
 export default userRouter  

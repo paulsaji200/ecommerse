@@ -11,6 +11,7 @@ import { selectError } from '../../redux/user/getProduct';
 import { selectLoading } from '../../redux/user/getProduct';
 import { fetchProducts } from '../../redux/user/getProduct';
 import SidebarFilter from '../user/sorting';
+import { getCartAsync } from '../../redux/user/Cart';
 
 import { Heart } from 'lucide-react';
 
@@ -18,41 +19,49 @@ export const ProductCard = ({ product }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  // Using local state to track which product has been added to the cart
   const [addedToCart, setAddedToCart] = useState({});
-  // Using local state to track wishlist status
   const [inWishlist, setInWishlist] = useState({});
 
-  // Handle adding product to cart and toggle button to "Go to Cart"
   const handleAddToCart = (event, product) => {
-    event.stopPropagation();
+    event.stopPropagation();  // Prevent navigation to details
     dispatch(addToCartAsync(product));
-    setAddedToCart(prevState => ({ ...prevState, [product._id]: true }));
+
+    setAddedToCart((prevState) => ({ ...prevState, [product._id]: true }));
   };
 
-  // Handle navigation to product details
   const handleCardClick = (productId) => {
     navigate(`/productdetails/${productId}`);
   };
 
-  // Handle navigation to the cart
   const goToCart = (event) => {
-    event.stopPropagation();
+    event.stopPropagation();  // Prevent navigation to details
     navigate('/cart');
   };
 
-  // Handle toggling wishlist status
-  const toggleWishlist = (event, productId) => {
 
-     const response = api.post(`/user/addtowishlist${productId}`,{withcredential:true})
-          
-
+  const toggleWishlist = async (event, productId) => {
     event.stopPropagation();
-    setInWishlist(prevState => ({
-      ...prevState,
-      [productId]: !prevState[productId]
-    }));
-    // Here you would typically dispatch an action to update the wishlist in your global state or backend
+  
+    try {
+      // Send the request with `withCredentials: true` to ensure cookies (including token) are sent
+      const response = await api.post(
+        `/user/addtowishlist/${productId}`, 
+        {}, // No body needed
+        {
+          withCredentials: true,  // Ensure credentials (cookies) are sent
+        }
+      );
+  
+      // Update the local state to reflect the change
+      setInWishlist((prevState) => ({
+        ...prevState,
+        [productId]: !prevState[productId],  // Toggle wishlist status
+      }));
+  
+    } catch (error) {
+      console.error('Error adding to wishlist:', error);
+      // Handle any errors (e.g., token missing, expired, etc.)
+    }
   };
 
   return (
@@ -61,12 +70,12 @@ export const ProductCard = ({ product }) => {
         <div
           key={productItem._id}
           className="w-64 h-auto rounded overflow-hidden shadow-lg bg-white p-4 flex flex-col mb-12 relative"
-          onClick={() => handleCardClick(productItem._id)}
+          onClick={() => handleCardClick(productItem._id)}  // This should only fire when clicking outside buttons
         >
           {/* Wishlist heart icon */}
           <button
             className="absolute top-2 right-2 z-10 p-1 rounded-full bg-white shadow-md"
-            onClick={(e) => toggleWishlist(e, productItem._id)}
+            onClick={(e) => toggleWishlist(e, productItem._id)}  // Prevent event propagation
           >
             <Heart
               className={`h-6 w-6 ${inWishlist[productItem._id] ? 'text-red-500 fill-current' : 'text-gray-400'}`}
@@ -78,6 +87,7 @@ export const ProductCard = ({ product }) => {
             src={productItem.images[0] || 'https://via.placeholder.com/150'}
             alt={productItem.name || 'Product Image'}
           />
+
           <div className="flex-grow px-2 py-1">
             <div className="font-bold text-lg mb-1 truncate">{productItem.productName || 'Product Name'}</div>
             <p className="text-gray-700 text-sm line-clamp-2">{productItem.description || 'Product description goes here.'}</p>
@@ -96,11 +106,12 @@ export const ProductCard = ({ product }) => {
               </span>
             </div>
           </div>
+
           <div className="px-2 py-2">
             {addedToCart[productItem._id] ? (
               <button
                 className="bg-green-500 text-white font-bold py-1 px-2 rounded hover:bg-green-700 w-full text-sm"
-                onClick={goToCart}
+                onClick={goToCart}  // Prevent event propagation
               >
                 Go to Cart
               </button>
@@ -108,7 +119,7 @@ export const ProductCard = ({ product }) => {
               <button
                 className={`bg-blue-500 text-white font-bold py-1 px-2 rounded hover:bg-blue-700 w-full text-sm ${productItem.quantity === 0 ? 'cursor-not-allowed opacity-50' : ''}`}
                 disabled={productItem.quantity === 0}
-                onClick={(event) => handleAddToCart(event, productItem)}
+                onClick={(event) => handleAddToCart(event, productItem)}  // Prevent event propagation
               >
                 {productItem.quantity > 0 ? 'Add to Cart' : 'Sold Out'}
               </button>
@@ -119,6 +130,7 @@ export const ProductCard = ({ product }) => {
     </div>
   );
 };
+
 
 
 

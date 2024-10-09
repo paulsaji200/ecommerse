@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { getOrdersasync } from '../../redux/user/getordres';
+import { cancelOrder } from '../../redux/user/getordres';
+import { returnOrder } from '../../redux/user/getordres';
 
 const UserOrders = () => {
   const [loading, setLoading] = useState(true);
@@ -17,11 +19,13 @@ const UserOrders = () => {
   }, [dispatch]);
 
   const handleCancelOrder = (orderId, productId) => {
-   dispatch()
+
+    dispatch(cancelOrder({orderId, productId}))
+  
   };
 
   const handleReturnOrder = (orderId, productId) => {
-    console.log('Return product:', productId, 'in order:', orderId);
+    dispatch(returnOrder({orderId, productId}))
   };
 
   if (loading) {
@@ -83,6 +87,9 @@ const UserOrders = () => {
                   )}
                   {product.status === 'Cancelled' && (
                     <p className="text-red-600 font-bold">Cancelled</p>
+                  )}
+                  {product.status === 'Returned' && (
+                    <p className="text-red-600 font-bold">Returned</p>
                   )}
                 </div>
               </div>

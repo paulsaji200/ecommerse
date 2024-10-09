@@ -8,6 +8,7 @@ import jwt from 'jsonwebtoken';
 import Address from "../../models/addressMode.js"
 import Order from "../../models/order.js";
 import Coupon from "../../models/Coupon.js";
+import Wallet from "../../models/wallet.js";
 export const addToCart = async (req, res) => {
   try {
     const userId = req.user.id; 
@@ -184,7 +185,7 @@ export const cartupdate = async (req, res) => {
             productId: product.productId,
             name: product.name,
             quantity: product.quantity,
-            price: product.price,
+            price: product.price*product.quantity,
             status: 'Ordered',
           })),
           totalPrice: orderData.totalPrice,
@@ -343,6 +344,117 @@ console.log(discountAmount)
     res.status(500).json({ success: false, message: 'Server error. Please try again.' });
   }
 };
+
+
+
+
+
+export const cancelOrder = async (req, res) => {
+  console.log("Cancel Order Initiated");
+  const userId = req.user.id;
+
+  try {
+    const { orderId, productId } = req.body;
+
+    // Find the order and the specific product by their IDs
+    const order = await Order.findOneAndUpdate(
+      { _id: orderId, "products._id": productId },  // Find the order and the specific product
+      { $set: { "products.$.status": "Cancelled" } },  // Update product's status
+      { new: true }  // Return the updated document
+    );
+
+
+    if (!order) {
+      return res.status(404).json({ message: "Order or product not found" });
+    }
+
+    console.log("Order found and product status updated.");
+         
+    // Fetch the specific product details for refund calculation
+    const product = order.products.find(p => p._id.toString() === productId);
+
+    if (!product) {
+      return res.status(404).json({ message: "Product not found in the order" });
+    }
+
+    // Calculate total price and proportional refund amount based on the coupon
+    const totalPrice = order.products.reduce((sum, p) => sum + p.price, 0); // Sum total price of all products in the order
+    const couponAmount = order.couponAmount || 0;  // Coupon value applied to the entire order
+    const refundAmount = (product.price / totalPrice) * couponAmount;
+
+    const actualRefund = product.price - refundAmount;  // Final amount to be refunded after applying coupon share
+    console.log(`Refund Amount: ${refundAmount}, Actual Refund: ${actualRefund}`);
+
+    // Fetch the user's wallet
+    let walletData = await Wallet.findOne({ user: userId });
+
+    // If wallet doesn't exist, create a new one
+    if (!walletData) {
+      walletData = new Wallet({
+        user: userId,
+        balance: 0,
+        transactions: []
+      });
+      await walletData.save();  // Save the newly created wallet
+    }
+
+    // Update wallet balance and log refund transaction
+    walletData.balance += actualRefund;
+    console.log(`Wallet updated with ${actualRefund}`);
+
+    walletData.transactions.push({
+      description: `Refund for cancelled product: ${product.name}`,
+      type: 'credit',
+      amount: actualRefund
+    });
+
+    // If a coupon was applied, adjust the remaining coupon amount
+    if (couponAmount > 0) {
+      console.log("Adjusting coupon amount");
+      order.couponAmount -= refundAmount;
+      
+      await order.save();  // Save the updated order
+    }
+    order.totalPrice=order.totalPrice-product.price
+    await order.save();
+    await walletData.save();  // Save the wallet with updated balance and transaction
+
+    res.status(200).json({
+      message: "Order cancelled successfully, refund processed",
+      order,
+      refundAmount: actualRefund  // Return the actual refund amount after applying coupon
+    });
+
+  } catch (error) {
+    console.error("Error cancelling order:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+
+export const returnOrder = async (req, res) => {
+  try {
+    const { orderId, productId } = req.body; // Assuming productId and orderId are passed as URL params
+console.log(productId)
+   
+    const order = await Order.findOneAndUpdate(
+      { _id: orderId, "products._id": productId },  // Find the order and product
+      { $set: { "products.$.status": "Returned" } },     // Use positional operator to update status
+      { new: true } 
+    );
+
+    if (!order) {
+      return res.status(404).json({ message: "Order or product not found" });
+    }
+
+    res.status(200).json({ message: "Order cancelled successfully", order });
+  } catch (error) {
+    console.error("Error cancelling order:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+
 
 
     

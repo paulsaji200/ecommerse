@@ -30,6 +30,9 @@ import EnterPasswordComponent from "../components/user/newpassword";
 import Addaddresspage from "../pages/user/Addaddresspage";
 import AdminOrderDetails from "../components/admin/orderdeatils";
 import CouponManagement from "../pages/admin/addcoupen";
+import WishlistPage from "../components/user/Wishlistcomp";
+import WalletPage from "../pages/user/wallet";
+import SalesReport from "../pages/admin/Report";
 const Router = createBrowserRouter([
   {
     path: "/",
@@ -62,7 +65,13 @@ const Router = createBrowserRouter([
       <UserProtectedRoute>
         <ShoppingCart/>
       </UserProtectedRoute>
-    )},
+    )},{
+      path: "wishlist",
+        element: (
+          <UserProtectedRoute>
+            <WishlistPage/>
+          </UserProtectedRoute>
+        )},
       {
         path:"forgetpassword",
         element:<EnterEmailComponent/>
@@ -104,6 +113,9 @@ const Router = createBrowserRouter([
       {
         path: "addaddress",
         element: <Addaddresspage />,
+      }, {
+        path: "wallet",
+        element: <WalletPage />,
       }
     ],
   },
@@ -140,6 +152,9 @@ const Router = createBrowserRouter([
       {
         path: "addproduct",
         element: <Addproduct />,
+      },{
+        path: "report",
+        element: <SalesReport/>,
       },
       {
         path: "addcoupon",

@@ -1,10 +1,11 @@
 import  { useState } from 'react';
 import { EyeIcon, EyeOffIcon } from 'lucide-react';
 import api from '../../utils/axios';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 const EnterPasswordComponent = 
 () => {
+  const navigate = useNavigate()
     const location = useLocation();
     const searchParams = new URLSearchParams(location.search);
     const user_id = searchParams.get('user_id');
@@ -49,6 +50,10 @@ const EnterPasswordComponent =
 
       if (response.status === 200) {
         setMessage('Password reset successfully!');
+        setTimeout(()=>{
+          navigate("/")
+        },2000)
+        
       }
     } catch (err) {
       setError('Failed to reset password. Please try again.');

@@ -11,7 +11,8 @@ const AdminLogin = () => {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-
+    console.log("sdbdhsc")
+    console.log(email,password)
     try {
       const response = await api.post(
         '/admin/login', 
@@ -20,7 +21,7 @@ const AdminLogin = () => {
           password: password
         },
         {
-          withCredentials: true // This sends cookies or credentials (if necessary)
+          withCredentials: true 
         }
       );
 
